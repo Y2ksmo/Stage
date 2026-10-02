@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { TURNSTILE_SITE_KEY, TurnstileWidget } from "./TurnstileWidget";
 
 type Step = "email" | "code";
 
@@ -13,6 +14,8 @@ export function StaffLogin({ redirectTo }: { redirectTo?: string }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
 
   async function post(url: string, body: unknown) {
     const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -25,12 +28,13 @@ export function StaffLogin({ redirectTo }: { redirectTo?: string }) {
     setBusy(true);
     setError(null);
     try {
-      await post("/api/auth/login/request", { email });
+      await post("/api/auth/login/request", { email, turnstileToken: captcha });
       setStep("code"); // shown for every address, so it reveals nothing about which accounts exist
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er ging iets mis.");
     } finally {
       setBusy(false);
+      setResetSignal((n) => n + 1); // single-use token
     }
   }
 
@@ -57,8 +61,9 @@ export function StaffLogin({ redirectTo }: { redirectTo?: string }) {
       <form onSubmit={onEmail}>
         <label htmlFor="login-email">E-mailadres</label>
         <input id="login-email" type="text" inputMode="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={busy} required />
+        <TurnstileWidget onToken={setCaptcha} resetSignal={resetSignal} />
         {errorBox}
-        <button type="submit" disabled={busy || !email.trim()}>{busy ? "Bezig…" : "Stuur inlogcode"}</button>
+        <button type="submit" disabled={busy || !email.trim() || (!!TURNSTILE_SITE_KEY && !captcha)}>{busy ? "Bezig…" : "Stuur inlogcode"}</button>
       </form>
     );
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse, readJson } from "../../../lib/http";
+import { turnstileFailure, verifyTurnstile } from "../../../lib/turnstile";
 import { submitPublicTakedown } from "../../../services/takedownRequest";
 
 /** Public endpoint: no login required. */
@@ -18,6 +19,13 @@ export async function POST(request: Request) {
       { error: "Verplichte velden: requesterEmail, targetType, targetId, grounds." },
       { status: 400 },
     );
+  }
+
+  // Bot check before any database work.
+  const human = await verifyTurnstile(body.turnstileToken, request.headers.get("x-forwarded-for")?.split(",")[0]?.trim());
+  if (!human.ok) {
+    const f = turnstileFailure(human);
+    return NextResponse.json({ error: f.error }, { status: f.status });
   }
 
   try {

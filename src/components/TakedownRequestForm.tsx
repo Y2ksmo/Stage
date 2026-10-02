@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { TURNSTILE_SITE_KEY, TurnstileWidget } from "./TurnstileWidget";
 
 const MAX_GROUNDS = 5000;
 
@@ -17,12 +18,15 @@ export function TakedownRequestForm({ targetType, targetId }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const evidenceUrls = urls.split("\n").map((u) => u.trim()).filter(Boolean);
     if (!grounds.trim()) return setError("Beschrijf waarom dit item onjuist is of uw rechten schendt.");
     if (evidenceUrls.length > 10) return setError("Voeg maximaal 10 links toe.");
+    if (TURNSTILE_SITE_KEY && !captcha) return setError("Voltooi eerst de beveiligingscontrole.");
 
     setBusy(true);
     setError(null);
@@ -30,7 +34,7 @@ export function TakedownRequestForm({ targetType, targetId }: Props) {
       const res = await fetch("/api/takedown-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requesterEmail: email, requesterName: name || undefined, targetType, targetId, grounds, evidenceUrls }),
+        body: JSON.stringify({ requesterEmail: email, requesterName: name || undefined, targetType, targetId, grounds, evidenceUrls, turnstileToken: captcha }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; requestId?: string };
       if (!res.ok) throw new Error(data.error ?? "Het verzoek kon niet worden verzonden. Probeer het later opnieuw.");
@@ -39,6 +43,8 @@ export function TakedownRequestForm({ targetType, targetId }: Props) {
       setError(err instanceof Error ? err.message : "Het verzoek kon niet worden verzonden.");
     } finally {
       setBusy(false);
+      // a Turnstile token works exactly once, whatever the outcome
+      setResetSignal((n) => n + 1);
     }
   }
 
@@ -66,8 +72,9 @@ export function TakedownRequestForm({ targetType, targetId }: Props) {
       <label htmlFor="urls">Links naar onderbouwing (optioneel, één per regel, max 10)</label>
       <textarea id="urls" className="short" value={urls} onChange={(e) => setUrls(e.target.value)} disabled={busy} placeholder="https://" />
 
+      <TurnstileWidget onToken={setCaptcha} resetSignal={resetSignal} />
       <div aria-live="polite">{error && <p className="card notice-bad" role="alert">{error}</p>}</div>
-      <button type="submit" disabled={busy}>{busy ? "Bezig met versturen…" : "Verzoek indienen"}</button>
+      <button type="submit" disabled={busy || (!!TURNSTILE_SITE_KEY && !captcha)}>{busy ? "Bezig met versturen…" : "Verzoek indienen"}</button>
     </form>
   );
 }
