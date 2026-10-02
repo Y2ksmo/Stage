@@ -37,6 +37,17 @@ async function main() {
   res = await VerificationService.evaluateAndSetState("CLAIM", claim.id);
   assert.equal(res.state, "VERIFIED");
   assert.equal((await prisma.claim.findUniqueOrThrow({ where: { id: claim.id } })).state, "VERIFIED");
+  // verification must have appended a score snapshot (3 verified-claim data points -> too little data)
+  const snap = await prisma.scoreSnapshot.findFirst({ where: { leaderId: leader.id }, orderBy: { computedAt: "desc" } });
+  assert.ok(snap, "snapshot written on VERIFIED transition");
+  assert.equal(snap.band, "INSUFFICIENT_DATA");
+  assert.equal(snap.riskScore, null);
+  // DISPUTED removes the item from scoring and writes another snapshot
+  await prisma.claim.update({ where: { id: claim.id }, data: { state: "DISPUTED" } });
+  const before = await prisma.scoreSnapshot.count({ where: { leaderId: leader.id } });
+  const { recomputeLeaderScore } = await import("../src/services/scoring");
+  await recomputeLeaderScore(prisma, leader.id);
+  assert.equal(await prisma.scoreSnapshot.count({ where: { leaderId: leader.id } }), before + 1);
   // DB constraint: vote must have exactly one target
   await assert.rejects(prisma.verificationVote.create({ data: { reviewerId: r1.id, value: "CONFIRM", rationale: "x" } }));
   console.log("ALL VERIFICATION TESTS PASSED");

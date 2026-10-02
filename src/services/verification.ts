@@ -1,5 +1,6 @@
 import { Prisma, PublishState, ReplyStatus, Role, SourceTier, VoteValue, EvidenceKind } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { recomputeLeaderScore } from "./scoring";
 
 export type TargetType = "CLAIM" | "INCIDENT";
 
@@ -19,7 +20,7 @@ const REQUIRED_CONFIRMS = 2;
 const REQUIRED_REJECTS = 2;
 const MIN_SPECIFICITY = 0.6;
 
-interface EvidenceLite {
+export interface EvidenceLite {
   tier: SourceTier;
   kind: EvidenceKind;
   publisherKey: string;
@@ -49,8 +50,8 @@ interface EvalInput {
  * Independent source = distinct ownership group (or publisher), archived, not social/screenshot,
  * and at least one of them must be PRIMARY or TIER1_MEDIA.
  */
-export function evaluate(i: EvalInput): VerificationResult {
-  const counted = i.evidence.filter(
+export function countIndependentSources(evidence: EvidenceLite[]) {
+  const counted = evidence.filter(
     (e) => e.tier !== "SOCIAL" && e.kind !== "SCREENSHOT" && e.archiveUrl && e.sha256,
   );
   const groups = new Map<string, SourceTier[]>();
@@ -58,8 +59,14 @@ export function evaluate(i: EvalInput): VerificationResult {
     const k = (e.ownershipGroup ?? e.publisherKey).toLowerCase();
     groups.set(k, [...(groups.get(k) ?? []), e.tier]);
   }
-  const independent = groups.size;
-  const hasStrong = [...groups.values()].some((t) => t.some((x) => x === "PRIMARY" || x === "TIER1_MEDIA"));
+  return {
+    independent: groups.size,
+    hasStrong: [...groups.values()].some((t) => t.some((x) => x === "PRIMARY" || x === "TIER1_MEDIA")),
+  };
+}
+
+export function evaluate(i: EvalInput): VerificationResult {
+  const { independent, hasStrong } = countIndependentSources(i.evidence);
 
   const valid = i.votes.filter((v) => !v.conflictDeclared);
   const confirms = valid.filter((v) => v.value === "CONFIRM").length;
@@ -184,7 +191,10 @@ export class VerificationService {
         specificityOk: !needsSpecificity || c.specificity >= MIN_SPECIFICITY,
         now,
       });
-      if (r.state !== c.state) await db.claim.update({ where: { id: c.id }, data: { state: r.state } });
+      if (r.state !== c.state) {
+        await db.claim.update({ where: { id: c.id }, data: { state: r.state } });
+        await VerificationService.rescoreIfScoreRelevant(db, c.leaderId, c.state, r.state);
+      }
       return r;
     }
     const inc = await db.incident.findUnique({
@@ -202,7 +212,21 @@ export class VerificationService {
       specificityOk: true,
       now,
     });
-    if (r.state !== inc.state) await db.incident.update({ where: { id: inc.id }, data: { state: r.state } });
+    if (r.state !== inc.state) {
+      await db.incident.update({ where: { id: inc.id }, data: { state: r.state } });
+      await VerificationService.rescoreIfScoreRelevant(db, inc.leaderId, inc.state, r.state);
+    }
     return r;
+  }
+
+  /** Only VERIFIED items are scored, so a transition into or out of VERIFIED changes the score
+   *  (including VERIFIED -> DISPUTED / WITHDRAWN, which must remove the item from the score). */
+  private static async rescoreIfScoreRelevant(
+    db: Prisma.TransactionClient | typeof prisma,
+    leaderId: string,
+    from: PublishState,
+    to: PublishState,
+  ) {
+    if (from !== to && (from === "VERIFIED" || to === "VERIFIED")) await recomputeLeaderScore(db, leaderId);
   }
 }
