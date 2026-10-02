@@ -28,6 +28,15 @@ async function main() {
   assert.equal(await prisma.scoreSnapshot.count({ where: { leaderId: leader.id } }), snapsBefore + 1); // rescored
   assert.equal(await prisma.moderationAction.count({ where: { targetId: claim.id, actorId: legal.id } }), 1); // audited
   assert.equal((await call(ok)).status, 409); // already disputed
+  // linked public request: mismatched item rejected, matching one is resolved
+  const other = await prisma.claim.create({ data: { leaderId: leader.id, submitterId: rev.id, statementText: "o", dateMade: new Date(), sourceUrl: "https://b.example", state: "VERIFIED" } });
+  const treq = await prisma.takedown.create({ data: { leaderId: leader.id, targetType: "CLAIM", targetId: other.id, grounds: "inaccurate", requesterEmail: "x@y.z" } });
+  assert.equal((await call({ ...ok, itemId: claim.id, targetStatus: "WITHDRAWN", takedownRequestId: treq.id })).status, 400);
+  assert.equal((await call({ ...ok, itemId: other.id, targetStatus: "WITHDRAWN", takedownRequestId: treq.id })).status, 200);
+  const done = await prisma.takedown.findUniqueOrThrow({ where: { id: treq.id } });
+  assert.equal(done.status, "UPHELD");
+  assert.equal(done.decidedBy, legal.id);
+  assert.equal((await call({ ...ok, itemId: other.id, targetStatus: "DISPUTED", takedownRequestId: treq.id })).status, 409); // withdrawn/resolved
   console.log("TAKEDOWN TESTS PASSED");
 }
 main().then(() => prisma.$disconnect(), async (e) => { console.error(e); await prisma.$disconnect(); process.exit(1); });

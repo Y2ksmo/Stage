@@ -15,8 +15,10 @@ export async function applyTakedownAction(params: {
   targetId: string;
   targetState: TakedownTarget;
   reason: string;
+  /** Optional link to a public Takedown request, resolved by this action. */
+  takedownRequestId?: string;
 }) {
-  const { actorId, targetType, targetId, targetState, reason } = params;
+  const { actorId, targetType, targetId, targetState, reason, takedownRequestId } = params;
 
   return prisma.$transaction(
     async (tx) => {
@@ -40,6 +42,27 @@ export async function applyTakedownAction(params: {
         throw new VerificationError("CONFLICT", "Item is WITHDRAWN and cannot be changed here.");
       }
 
+      // Link the public request: it must exist, still be open, and concern this exact item.
+      if (takedownRequestId) {
+        const req = await tx.takedown.findUnique({ where: { id: takedownRequestId } });
+        if (!req) throw new VerificationError("NOT_FOUND", "Takedown request not found.");
+        if (req.status === "UPHELD" || req.status === "REJECTED") {
+          throw new VerificationError("CONFLICT", "Takedown request has already been resolved.");
+        }
+        if (req.targetType !== targetType || req.targetId !== targetId) {
+          throw new VerificationError("INVALID", "Takedown request does not refer to this item.");
+        }
+        await tx.takedown.update({
+          where: { id: takedownRequestId },
+          data: {
+            // DISPUTED keeps the request open pending a final decision; WITHDRAWN upholds it.
+            status: targetState === "WITHDRAWN" ? "UPHELD" : "UNDER_REVIEW",
+            decidedBy: targetState === "WITHDRAWN" ? actorId : null,
+            decisionNote: reason,
+          },
+        });
+      }
+
       const previous: PublishState = item.state;
       if (targetType === "CLAIM") await tx.claim.update({ where: { id: targetId }, data: { state: targetState } });
       else await tx.incident.update({ where: { id: targetId }, data: { state: targetState } });
@@ -50,7 +73,7 @@ export async function applyTakedownAction(params: {
           action: `TAKEDOWN_${targetState}`,
           targetType,
           targetId,
-          reason: `${reason} (was ${previous})`,
+          reason: `${reason} (was ${previous}${takedownRequestId ? `; request ${takedownRequestId}` : ""})`,
         },
       });
 

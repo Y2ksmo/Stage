@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Ongeldige JSON." }, { status: 400 });
   }
-  const { itemType, itemId, targetStatus, reason } = body;
+  const { itemType, itemId, targetStatus, reason, takedownRequestId } = body;
 
   if (typeof itemId !== "string" || !itemId || typeof reason !== "string" || !reason.trim() || !itemType || !targetStatus) {
     return NextResponse.json(
@@ -28,6 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Takedown status moet DISPUTED of WITHDRAWN zijn." }, { status: 400 });
   }
 
+  if (takedownRequestId !== undefined && (typeof takedownRequestId !== "string" || !takedownRequestId)) {
+    return NextResponse.json({ error: "Ongeldig takedownRequestId." }, { status: 400 });
+  }
+
   try {
     const result = await applyTakedownAction({
       actorId,
@@ -35,6 +39,7 @@ export async function POST(request: Request) {
       targetId: itemId,
       targetState: targetStatus,
       reason: reason.trim(),
+      takedownRequestId: takedownRequestId as string | undefined,
     });
     return NextResponse.json({ success: true, message: `Item succesvol op ${targetStatus} gezet.`, result });
   } catch (error) {
