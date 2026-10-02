@@ -36,6 +36,15 @@ async function main() {
   assert.match(m.text, /A verbatim prophecy statement/);
   assert.ok(!m.text.includes("//reply")); // trailing slash in base URL normalised
 
+  // a real transport reports delivered=true; the dev fallback (no key) reports false
+  setMailTransport(async () => {});
+  const mkParams = { recipientEmail: "a@b.co", leaderName: "x", itemTitle: "y", rawToken: "t", deadline: new Date() };
+  assert.deepEqual(await NotificationService.sendRightOfReplyNotice(mkParams), { delivered: true });
+  setMailTransport(null);
+  const keyBefore = process.env.RESEND_API_KEY; delete process.env.RESEND_API_KEY;
+  assert.deepEqual(await NotificationService.sendRightOfReplyNotice(mkParams), { delivered: false });
+  if (keyBefore) process.env.RESEND_API_KEY = keyBefore;
+
   // validation and production safety
   await assert.rejects(NotificationService.sendRightOfReplyNotice({ recipientEmail: "bad", leaderName: "x", itemTitle: "y", rawToken: "t", deadline: new Date() }), /recipient/);
   setMailTransport(null);

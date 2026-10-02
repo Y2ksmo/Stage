@@ -18,15 +18,19 @@ export function setMailTransport(t: MailTransport | null) {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isProd = () => process.env.NODE_ENV === "production";
 
-async function deliver(message: MailMessage) {
-  if (transportOverride) return transportOverride(message);
+/** Resolves true when the message was handed to a real transport, false when it was only logged (dev, no key). */
+async function deliver(message: MailMessage): Promise<boolean> {
+  if (transportOverride) {
+    await transportOverride(message);
+    return true;
+  }
 
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     // Never silently skip in production: an unsent notice would let the window expire unnoticed.
     if (isProd()) throw new VerificationError("UPSTREAM", "Email transport is not configured (RESEND_API_KEY).");
     console.log(`[DEV MODE - EMAIL NOT SENT] To: ${message.to}\n${message.text}`);
-    return;
+    return false;
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -39,6 +43,7 @@ async function deliver(message: MailMessage) {
     console.error("Email provider rejected message", res.status, await res.text().catch(() => ""));
     throw new VerificationError("UPSTREAM", "Failed to send email notification.");
   }
+  return true;
 }
 
 export interface SendRightOfReplyNoticeParams {
@@ -54,7 +59,7 @@ export interface SendRightOfReplyNoticeParams {
 
 export class NotificationService {
   /** Build the secret reply link and email the right-of-reply notice. The link is never returned or logged in production. */
-  static async sendRightOfReplyNotice(params: SendRightOfReplyNoticeParams): Promise<void> {
+  static async sendRightOfReplyNotice(params: SendRightOfReplyNoticeParams): Promise<{ delivered: boolean }> {
     const { recipientEmail, leaderName, itemTitle, rawToken, deadline } = params;
     if (!EMAIL_RE.test(recipientEmail ?? "")) throw new VerificationError("INVALID", "Valid recipient email address is required.");
 
@@ -74,6 +79,6 @@ export class NotificationService {
       deadlineDateStr,
       replyUrl,
     });
-    await deliver({ to: recipientEmail, ...mail });
+    return { delivered: await deliver({ to: recipientEmail, ...mail }) };
   }
 }
