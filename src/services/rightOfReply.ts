@@ -1,9 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { NotificationService } from "./notification";
 import { VerificationError, VerificationService, type TargetType } from "./verification";
 
-export const REPLY_WINDOW_DAYS = 14;
+import { REPLY_WINDOW_DAYS } from "./constants";
+export { REPLY_WINDOW_DAYS };
 const ALLOWED_ROLES = ["ADMIN", "LEGAL", "EDITOR"] as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -162,4 +164,63 @@ export async function recordSubjectReply(params: RecordReplyParams) {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );
+}
+
+/**
+ * Open the window, then email the notice. The email goes out only after the window is committed
+ * (so the link is valid), and if sending fails the window is rolled back: a window nobody was told about
+ * must never run down and let the item verify.
+ */
+export async function startReplyWindowAndNotify(params: TriggerReplyWindowParams) {
+  const { itemType, itemId, userId } = params;
+  const started = await triggerRightOfReply(params);
+
+  try {
+    const [leader, item] = await Promise.all([
+      prisma.leader.findUniqueOrThrow({ where: { id: started.leaderId }, select: { displayName: true } }),
+      itemType === "CLAIM"
+        ? prisma.claim.findUniqueOrThrow({ where: { id: itemId }, select: { summary: true, statementText: true } })
+        : prisma.incident.findUniqueOrThrow({ where: { id: itemId }, select: { title: true } }),
+    ]);
+    const itemTitle =
+      "title" in item ? item.title : (item.summary ?? item.statementText).slice(0, 140);
+    await NotificationService.sendRightOfReplyNotice({
+      recipientEmail: started.recipient,
+      leaderName: leader.displayName,
+      itemTitle,
+      rawToken: started.replyToken,
+      deadline: started.replyDeadline,
+    });
+  } catch (error) {
+    await prisma.$transaction(async (tx) => {
+      const data = { replyStatus: "NOT_OFFERED" as const, replyDeadline: null };
+      if (itemType === "CLAIM") await tx.claim.updateMany({ where: { id: itemId, replyStatus: "OFFERED" }, data });
+      else await tx.incident.updateMany({ where: { id: itemId, replyStatus: "OFFERED" }, data });
+      await tx.rightOfReply.deleteMany({
+        where: { ...(itemType === "CLAIM" ? { claimId: itemId } : { incidentId: itemId }), respondedAt: null },
+      });
+      await tx.moderationAction.create({
+        data: {
+          actorId: userId,
+          action: "RIGHT_OF_REPLY_NOTICE_FAILED",
+          targetType: itemType,
+          targetId: itemId,
+          reason: "Notice email could not be sent; reply window rolled back.",
+        },
+      });
+    });
+    if (error instanceof VerificationError) throw error;
+    console.error("right-of-reply notice failed", error);
+    throw new VerificationError("UPSTREAM", "Kennisgeving kon niet worden verzonden; wederhoor is niet gestart.");
+  }
+
+  // The reply token is deliberately NOT returned: it exists only in the email.
+  return {
+    itemType,
+    itemId,
+    leaderId: started.leaderId,
+    replyStatus: started.replyStatus,
+    replyDeadline: started.replyDeadline,
+    recipient: started.recipient,
+  };
 }

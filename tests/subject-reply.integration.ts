@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { prisma } from "../src/lib/prisma";
+import { setMailTransport } from "../src/services/notification";
 import { POST as startWindow } from "../src/app/api/moderation/reply-window/route";
 import { POST as reply } from "../src/app/api/reply/route";
 
@@ -11,12 +12,21 @@ async function main() {
   const [editor, r1, r2, sub] = await Promise.all([mk("e", "EDITOR"), mk("a", "REVIEWER"), mk("b", "REVIEWER"), mk("s", "CONTRIBUTOR")]);
   const leader = await prisma.leader.create({ data: { slug: `p${tag}`, displayName: "P", aliases: [], publicProfileUrls: [], replyContact: "press@org.example" } });
   process.env.PFPA_DEV_USER_ID = editor.id;
+  process.env.APP_BASE_URL = "https://pfpa.example";
+  let lastMail: { to: string; text: string } | null = null;
+  setMailTransport(async (m) => { lastMail = m; });
 
+  const tokenFromMail = () => {
+    const m = (lastMail as { text: string } | null)?.text.match(/\/reply\?token=([A-Za-z0-9_-]+)/);
+    assert.ok(m, "email contains the reply link");
+    return m[1];
+  };
   const mkClaim = () => prisma.claim.create({ data: { leaderId: leader.id, submitterId: sub.id, statementText: "q", dateMade: new Date(), sourceUrl: "https://a.example", state: "IN_REVIEW" } });
   const open = async (claimId: string) => {
     const res = await post(startWindow, { itemType: "CLAIM", itemId: claimId });
     assert.equal(res.status, 200);
-    return (await res.json()).result.replyToken as string;
+    assert.equal((await res.json()).result.replyToken, undefined); // token must not be in the API response
+    return tokenFromMail();
   };
 
   // --- ACCEPT with text ---
@@ -57,7 +67,8 @@ async function main() {
   for (const k of ["a.example", "b.example"]) await prisma.evidence.create({ data: { uploaderId: sub.id, incidentId: inc.id, kind: "URL", url: `https://${k}`, archiveUrl: `https://arc/${k}`, sha256: "ab".repeat(32), tier: "TIER1_MEDIA", publisherKey: k } });
   for (const r of [r1, r2]) await prisma.verificationVote.create({ data: { reviewerId: r.id, incidentId: inc.id, value: "CONFIRM", rationale: "ok" } });
   const w = await post(startWindow, { itemType: "INCIDENT", itemId: inc.id });
-  const ti = (await w.json()).result.replyToken as string;
+  assert.equal(w.status, 200);
+  const ti = tokenFromMail();
   assert.equal((await prisma.incident.findUniqueOrThrow({ where: { id: inc.id } })).state, "IN_REVIEW"); // window open: blocked
   const done = await post(reply, { token: ti, action: "ACCEPT", replyText: "We dispute severity." });
   assert.equal((await done.json()).result.itemState, "VERIFIED");

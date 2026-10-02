@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { prisma } from "../src/lib/prisma";
+import { setMailTransport } from "../src/services/notification";
 import { POST } from "../src/app/api/moderation/reply-window/route";
 
 const call = (body: unknown) => POST(new Request("http://x", { method: "POST", body: JSON.stringify(body) }));
 
 async function main() {
+  process.env.APP_BASE_URL = "https://pfpa.example";
+  setMailTransport(async () => {});
   const tag = Date.now().toString();
   const mk = (n: string, role: "EDITOR" | "REVIEWER") => prisma.user.create({ data: { email: `${n}${tag}@t.io`, handle: `${n}${tag}`, role } });
   const [editor, rev] = await Promise.all([mk("e", "EDITOR"), mk("r", "REVIEWER")]);

@@ -3,9 +3,9 @@ import { prisma } from "../lib/prisma";
 import { countIndependentSources, type EvidenceLite } from "./evidence";
 import { handleItemStatusChange } from "./scoring";
 
-export type VerificationErrorCode = "INVALID" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "RATE_LIMITED";
+export type VerificationErrorCode = "INVALID" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "RATE_LIMITED" | "UPSTREAM";
 export const HTTP_STATUS: Record<VerificationErrorCode, number> = {
-  INVALID: 400, UNAUTHORIZED: 401, FORBIDDEN: 403, NOT_FOUND: 404, CONFLICT: 409, RATE_LIMITED: 429,
+  INVALID: 400, UNAUTHORIZED: 401, FORBIDDEN: 403, NOT_FOUND: 404, CONFLICT: 409, RATE_LIMITED: 429, UPSTREAM: 502,
 };
 export class VerificationError extends Error {
   constructor(public code: VerificationErrorCode, message: string) {
