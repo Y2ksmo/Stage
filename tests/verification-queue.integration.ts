@@ -27,9 +27,10 @@ async function main() {
   assert.equal(c.independentSources, 1); // unarchived blog does not count
   assert.equal(c.evidence.length, 2);
   assert.equal(c.evidence.find((e) => e.publisherKey === "blog.example")!.archived, false);
-  assert.match(c.progress, /independent archived source/);
+  assert.match(c.progress, /1 extra onafhankelijke, gearchiveerde bron\b/);
+  assert.match(c.progress, /1 bron is niet gearchiveerd en telt niet mee/);
   assert.equal(c.myVote, null);
-  assert.match(q1[1].progress, /right-of-reply/); // incidents need reply done
+  assert.match(q1[1].progress, /wederhoor aanbieden en afronden/); // incidents need reply done
 
   // votes show as counts and as my own vote only
   await VerificationService.castVote({ reviewerId: r2.id, targetType: "CLAIM", targetId: claim.id, value: "CONFIRM", rationale: "checked" });

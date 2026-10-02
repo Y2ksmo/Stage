@@ -15,14 +15,40 @@ export class VerificationError extends Error {
 
 export type TargetType = "CLAIM" | "INCIDENT";
 
+/** What an IN_REVIEW item still lacks before it can verify. Structured so any language can render it. */
+export type MissingRequirement =
+  | { code: "SOURCES"; count: number }
+  | { code: "STRONG_SOURCE" }
+  | { code: "CONFIRMS"; count: number }
+  | { code: "SPECIFICITY" }
+  | { code: "REPLY_NOT_OFFERED" }
+  | { code: "REPLY_WINDOW_OPEN" };
+
 export interface VerificationResult {
   isVerified: boolean;
   state: PublishState;
   independentSourceCount: number;
   confirmVotes: number;
   rejectVotes: number;
+  /** English summary for API clients; derived from the structured fields below. */
   reason: string;
+  missing: MissingRequirement[];
+  /** Conflicting confirm/reject votes: the item stays in review until an editor decides. */
+  escalated: boolean;
+  /** Evidence that exists but does NOT count: not archived, or social/screenshot only. */
+  ignoredEvidence: { unarchived: number; unsupported: number };
 }
+
+const missingToEnglish = (m: MissingRequirement): string => {
+  switch (m.code) {
+    case "SOURCES": return `${m.count} more independent archived source(s)`;
+    case "STRONG_SOURCE": return "at least one primary or tier-1 source";
+    case "CONFIRMS": return `${m.count} more reviewer confirmation(s)`;
+    case "SPECIFICITY": return `claim specificity >= ${MIN_SPECIFICITY} for a failed/modified outcome`;
+    case "REPLY_NOT_OFFERED": return "right-of-reply offered and its window closed or answered";
+    case "REPLY_WINDOW_OPEN": return "right-of-reply window to close";
+  }
+};
 
 const REVIEWER_ROLES: Role[] = ["REVIEWER", "EDITOR", "ADMIN"];
 const REPLY_DONE: ReplyStatus[] = ["RECEIVED", "DECLINED", "EXPIRED"];
@@ -61,39 +87,47 @@ export function evaluate(i: EvalInput): VerificationResult {
   const confirms = valid.filter((v) => v.value === "CONFIRM").length;
   const rejects = valid.filter((v) => v.value === "REJECT").length;
 
-  const out = (state: PublishState, reason: string): VerificationResult => ({
+  const ignoredEvidence = {
+    unarchived: i.evidence.filter((e) => e.tier !== "SOCIAL" && e.kind !== "SCREENSHOT" && !(e.archiveUrl && e.sha256)).length,
+    unsupported: i.evidence.filter((e) => e.tier === "SOCIAL" || e.kind === "SCREENSHOT").length,
+  };
+
+  const out = (state: PublishState, reason: string, missing: MissingRequirement[] = [], escalated = false): VerificationResult => ({
     isVerified: state === "VERIFIED",
     state,
     independentSourceCount: independent,
     confirmVotes: confirms,
     rejectVotes: rejects,
     reason,
+    missing,
+    escalated,
+    ignoredEvidence,
   });
 
   // Votes only move items that are currently under review; never silently un-verify or un-dispute.
   if (i.state !== "IN_REVIEW") return out(i.state, `No change: item is ${i.state}.`);
 
   if (confirms >= REQUIRED_CONFIRMS && rejects >= REQUIRED_REJECTS) {
-    return out("IN_REVIEW", "Conflicting votes: escalated to an editor.");
+    return out("IN_REVIEW", "Conflicting votes: escalated to an editor.", [], true);
   }
   if (rejects >= REQUIRED_REJECTS) return out("REJECTED", "Rejected by reviewer consensus.");
 
-  const missing: string[] = [];
-  if (independent < REQUIRED_SOURCES) missing.push(`${REQUIRED_SOURCES - independent} more independent archived source(s)`);
-  else if (!hasStrong) missing.push("at least one primary or tier-1 source");
-  if (confirms < REQUIRED_CONFIRMS) missing.push(`${REQUIRED_CONFIRMS - confirms} more reviewer confirmation(s)`);
-  if (!i.specificityOk) missing.push(`claim specificity >= ${MIN_SPECIFICITY} for a failed/modified outcome`);
+  const missing: MissingRequirement[] = [];
+  if (independent < REQUIRED_SOURCES) missing.push({ code: "SOURCES", count: REQUIRED_SOURCES - independent });
+  else if (!hasStrong) missing.push({ code: "STRONG_SOURCE" });
+  if (confirms < REQUIRED_CONFIRMS) missing.push({ code: "CONFIRMS", count: REQUIRED_CONFIRMS - confirms });
+  if (!i.specificityOk) missing.push({ code: "SPECIFICITY" });
 
   const replyOpen =
     i.replyStatus === "OFFERED" && !!i.replyDeadline && i.replyDeadline > i.now;
   if (i.replyRequired && !REPLY_DONE.includes(i.replyStatus) && !(i.replyStatus === "OFFERED" && i.replyDeadline && i.replyDeadline <= i.now)) {
-    missing.push("right-of-reply offered and its window closed or answered");
+    missing.push({ code: "REPLY_NOT_OFFERED" });
   } else if (replyOpen) {
-    missing.push("right-of-reply window to close");
+    missing.push({ code: "REPLY_WINDOW_OPEN" });
   }
 
   if (missing.length === 0) return out("VERIFIED", "Verified: independent sources, reviewer confirmations and reply window satisfied.");
-  return out("IN_REVIEW", `Incomplete: needs ${missing.join("; ")}.`);
+  return out("IN_REVIEW", `Incomplete: needs ${missing.map(missingToEnglish).join("; ")}.`, missing);
 }
 
 export class VerificationService {

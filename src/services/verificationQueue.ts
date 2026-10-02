@@ -1,6 +1,7 @@
 import type { EvidenceKind, ReplyStatus, SourceTier, VoteValue } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { MIN_SPECIFICITY, VerificationError, evaluate, type TargetType } from "./verification";
+import { summarizeVerificationNl } from "./verificationStatus";
 
 const VOTER_ROLES = ["REVIEWER", "EDITOR", "ADMIN"] as const;
 
@@ -21,7 +22,7 @@ export interface QueueItem {
   rejectVotes: number;
   needsMoreVotes: number;
   myVote: "CONFIRM" | "REJECT" | "NEEDS_MORE" | null;
-  /** Human-readable list of what is still missing before the item can verify. */
+  /** Dutch description of what is still missing before the item can verify. */
   progress: string;
 }
 
@@ -86,7 +87,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
       rejectVotes: counted.filter((v) => v.value === "REJECT").length,
       needsMoreVotes: counted.filter((v) => v.value === "NEEDS_MORE").length,
       myVote: votes.find((v) => v.reviewerId === userId)?.value ?? null,
-      progress: result.reason,
+      progress: summarizeVerificationNl(result),
     };
   };
 
