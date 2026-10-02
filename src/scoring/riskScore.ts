@@ -10,7 +10,17 @@
  *  5. The score is an aggregation indicator, never a verdict about a person or faith.
  */
 
-export type OutcomeStatus = "PENDING" | "FULFILLED" | "FAILED" | "RETRACTED" | "MODIFIED";
+import type {
+  BiteCategory,
+  ClaimOutcome,
+  IncidentDimension,
+  ScoreBand,
+  ScoreDimension,
+} from "../domain/enums";
+
+export type OutcomeStatus = ClaimOutcome;
+export type DimensionKey = ScoreDimension;
+export type { BiteCategory, IncidentDimension, ScoreBand };
 export type Severity = 1 | 2 | 3 | 4 | 5;
 
 export interface ScoredClaim {
@@ -21,9 +31,11 @@ export interface ScoredClaim {
   verified: boolean;
 }
 
-export type IncidentDimension = "FINANCIAL" | "BEHAVIORAL" | "DOCTRINAL";
-
 export interface ScoredIncident {
+  /**
+   * FINANCIAL, BEHAVIORAL, and DOCTRINAL are scored below.
+   * CULTIC incidents stay on the record; the cultic dimension comes from `bite`.
+   */
   dimension: IncidentDimension;
   severity: Severity;
   occurredAt: Date;
@@ -35,8 +47,6 @@ export interface ScoredIncident {
   /** Court finding / audit / regulator action raises weight. */
   officialFinding: boolean;
 }
-
-export type BiteCategory = "BEHAVIOR" | "INFORMATION" | "THOUGHT" | "EMOTIONAL";
 
 export interface BiteItem {
   category: BiteCategory;
@@ -58,8 +68,6 @@ export interface ScoreInput {
   now?: Date;
 }
 
-export type DimensionKey = "PREDICTION" | "FINANCIAL" | "BEHAVIORAL" | "DOCTRINAL" | "CULTIC";
-
 export interface DimensionResult {
   key: DimensionKey;
   score: number | null; // null = no data, excluded
@@ -72,7 +80,7 @@ export interface DimensionResult {
 export interface ScoreResult {
   riskScore: number | null; // null when insufficient data
   authenticityScore: number | null; // 100 - risk (display convenience)
-  band: "INSUFFICIENT_DATA" | "LOW" | "ELEVATED" | "HIGH" | "SEVERE";
+  band: ScoreBand;
   confidence: number;
   dimensions: DimensionResult[];
   methodologyVersion: string;
@@ -144,7 +152,7 @@ function predictionDimension(claims: ScoredClaim[], now: Date): DimensionResult 
 /* ------------------------ Incident-based dimensions ---------------------- */
 
 function incidentDimension(
-  key: "FINANCIAL" | "BEHAVIORAL" | "DOCTRINAL",
+  key: Exclude<IncidentDimension, "CULTIC">,
   incidents: ScoredIncident[],
   now: Date,
   extra?: { publicAudit?: boolean | null },

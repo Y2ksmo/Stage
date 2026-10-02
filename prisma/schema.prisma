@@ -1,5 +1,7 @@
 // PFPA data model. PostgreSQL + pgvector.
 // Run once: CREATE EXTENSION IF NOT EXISTS vector;
+// Enum values are mirrored in src/domain/enums.ts.
+// Check drift with: node scripts/check-enum-sync.mjs
 
 generator client {
   provider        = "prisma-client-js"
@@ -30,11 +32,12 @@ enum LeaderStatus {
   UNDER_INVESTIGATION
 }
 
-/// Nothing is public until PUBLISHED.
+/// Public only as VERIFIED (normal display) or DISPUTED (banner, excluded from scoring).
+/// DRAFT, IN_REVIEW, REJECTED, and WITHDRAWN are never public.
 enum PublishState {
   DRAFT
   IN_REVIEW
-  VERIFIED     // meets the 2-source + 2-reviewer rule
+  VERIFIED     // meets the 2-source + 2-reviewer rule; this is the public state
   DISPUTED     // subject or community disputes; shown with banner
   REJECTED
   WITHDRAWN    // removed after legal/editorial action
@@ -65,8 +68,25 @@ enum IncidentCategory {
   BITE_EMOTIONAL
 }
 
+/// BITE model axes. IncidentCategory.BITE_* names the same four axes; ratings live on BiteItem.
+enum BiteCategory {
+  BEHAVIOR
+  INFORMATION
+  THOUGHT
+  EMOTIONAL
+}
+
 enum ScoreDimension {
   PREDICTION
+  FINANCIAL
+  BEHAVIORAL
+  DOCTRINAL
+  CULTIC
+}
+
+/// Dimensions an Incident may carry. PREDICTION is claim-only and is not valid here.
+/// CULTIC incidents stay on the record; the cultic score is computed from BiteItem ratings.
+enum IncidentDimension {
   FINANCIAL
   BEHAVIORAL
   DOCTRINAL
@@ -114,6 +134,42 @@ enum TakedownStatus {
   UNDER_REVIEW
   UPHELD
   REJECTED
+}
+
+/// Polymorphic subject of a takedown, abuse report, or moderation action.
+/// USER is for reports and account actions; a takedown targets content, not a user.
+enum ContentTarget {
+  CLAIM
+  INCIDENT
+  REVIEW
+  PROFILE
+  USER
+}
+
+/// Risk Indicator bands. INSUFFICIENT_DATA means no number is shown.
+enum ScoreBand {
+  INSUFFICIENT_DATA
+  LOW
+  ELEVATED
+  HIGH
+  SEVERE
+}
+
+/// Append-only audit vocabulary. The free-text explanation stays on ModerationAction.reason.
+enum ModerationActionKind {
+  SUBMIT            // contributor files a claim, incident, or review
+  MOVE_TO_REVIEW    // DRAFT -> IN_REVIEW
+  VERIFY            // IN_REVIEW -> VERIFIED
+  REJECT            // IN_REVIEW -> REJECTED
+  DISPUTE           // VERIFIED -> DISPUTED
+  WITHDRAW          // removed after legal/editorial action
+  RESTORE           // DISPUTED -> VERIFIED
+  EDIT              // content edit; ClaimVersion holds the before-image
+  OFFER_REPLY
+  RECORD_REPLY
+  SUSPEND_USER
+  REINSTATE_USER
+  RESOLVE_TAKEDOWN
 }
 
 /* ------------------------------- Users -------------------------------- */
@@ -248,7 +304,7 @@ model Incident {
   leaderId      String
   submitterId   String
   category      IncidentCategory
-  dimension     ScoreDimension
+  dimension     IncidentDimension
   title         String
   /// Factual, neutral description: what, when, where, documented by whom.
   description   String
@@ -355,7 +411,7 @@ model Review {
 model BiteItem {
   id        String   @id @default(cuid())
   reviewId  String
-  category  String   // BEHAVIOR | INFORMATION | THOUGHT | EMOTIONAL
+  category  BiteCategory
   indicator String   // e.g. "Requires permission for major life decisions"
   /// 0 absent · 1 mild · 2 systematic · 3 coercive/enforced
   rating    Int
@@ -379,7 +435,8 @@ model RightOfReply {
 model Takedown {
   id          String         @id @default(cuid())
   leaderId    String?
-  targetType  String         // CLAIM | INCIDENT | REVIEW | PROFILE
+  /// Content only. USER is not a takedown target; suspend via ModerationAction instead.
+  targetType  ContentTarget
   targetId    String
   grounds     String
   requesterEmail String
@@ -394,7 +451,7 @@ model Takedown {
 model AbuseReport {
   id         String   @id @default(cuid())
   reporterId String
-  targetType String
+  targetType ContentTarget
   targetId   String
   reason     String
   createdAt  DateTime @default(now())
@@ -402,14 +459,14 @@ model AbuseReport {
 }
 
 model ModerationAction {
-  id        String   @id @default(cuid())
-  actorId   String
-  action    String
-  targetType String
-  targetId  String
-  reason    String
-  createdAt DateTime @default(now())
-  actor     User     @relation(fields: [actorId], references: [id])
+  id         String               @id @default(cuid())
+  actorId    String
+  action     ModerationActionKind
+  targetType ContentTarget
+  targetId   String
+  reason     String
+  createdAt  DateTime             @default(now())
+  actor      User                 @relation(fields: [actorId], references: [id])
 }
 
 /* ---------------------- Scores (immutable history) --------------------- */
@@ -418,7 +475,7 @@ model ScoreSnapshot {
   id                 String   @id @default(cuid())
   leaderId           String
   riskScore          Int?     // null => insufficient data
-  band               String
+  band               ScoreBand
   confidence         Float
   dimensions         Json     // DimensionResult[]
   methodologyVersion String
