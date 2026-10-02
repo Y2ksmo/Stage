@@ -1,0 +1,462 @@
+// PFPA data model. PostgreSQL + pgvector.
+// Run once: CREATE EXTENSION IF NOT EXISTS vector;
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+/* ------------------------------- Enums -------------------------------- */
+
+enum Role {
+  READER
+  CONTRIBUTOR
+  REVIEWER   // can cast verification votes
+  EDITOR     // can publish, resolve disputes
+  LEGAL      // handles takedowns / right of reply
+  ADMIN
+}
+
+enum LeaderStatus {
+  ACTIVE
+  DECEASED
+  RETIRED
+  UNDER_INVESTIGATION
+}
+
+/// Nothing is public until PUBLISHED.
+enum PublishState {
+  DRAFT
+  IN_REVIEW
+  VERIFIED     // meets the 2-source + 2-reviewer rule
+  DISPUTED     // subject or community disputes; shown with banner
+  REJECTED
+  WITHDRAWN    // removed after legal/editorial action
+}
+
+enum ClaimOutcome {
+  PENDING
+  FULFILLED
+  FAILED
+  RETRACTED
+  MODIFIED     // quietly reworded / reinterpreted after the fact
+}
+
+enum IncidentCategory {
+  FINANCIAL_OPACITY
+  COERCED_GIVING
+  LUXURY_FUNDING
+  SCANDAL_MORAL
+  EMOTIONAL_MANIPULATION
+  ISOLATION_TACTICS
+  AUTHORITARIAN_CONTROL
+  DOCTRINAL_DEVIATION
+  ABUSE_ALLEGATION
+  LEGAL_FINDING
+  BITE_BEHAVIOR
+  BITE_INFORMATION
+  BITE_THOUGHT
+  BITE_EMOTIONAL
+}
+
+enum ScoreDimension {
+  PREDICTION
+  FINANCIAL
+  BEHAVIORAL
+  DOCTRINAL
+  CULTIC
+}
+
+enum SourceTier {
+  PRIMARY       // court record, regulator filing, original recording, signed statement
+  TIER1_MEDIA   // editorially accountable outlet
+  SECONDARY     // blog, aggregator, reputable NGO analysis
+  SOCIAL        // social post / unverified testimony — never counts alone
+}
+
+enum EvidenceKind {
+  URL
+  ARCHIVE_SNAPSHOT  // Wayback / archive.ph / our own WARC copy
+  PDF
+  VIDEO_TIMESTAMP
+  FILING
+  SCREENSHOT        // supporting only, never sufficient
+}
+
+enum VoteValue {
+  CONFIRM
+  REJECT
+  NEEDS_MORE
+}
+
+enum ReviewKind {
+  COMMUNITY_REVIEW
+  FINANCIAL_AUDIT
+  BITE_ASSESSMENT
+}
+
+enum ReplyStatus {
+  NOT_OFFERED
+  OFFERED
+  RECEIVED
+  DECLINED
+  EXPIRED
+}
+
+enum TakedownStatus {
+  OPEN
+  UNDER_REVIEW
+  UPHELD
+  REJECTED
+}
+
+/* ------------------------------- Users -------------------------------- */
+
+model User {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  handle           String   @unique
+  role             Role     @default(READER)
+  /// 0–100. Rises when contributions survive review; falls on rejected/brigading behaviour.
+  reputation       Int      @default(10)
+  emailVerifiedAt  DateTime?
+  suspendedUntil   DateTime?
+  createdAt        DateTime @default(now())
+
+  claims           Claim[]           @relation("ClaimSubmitter")
+  incidents        Incident[]        @relation("IncidentSubmitter")
+  reviews          Review[]
+  votes            VerificationVote[]
+  evidence         Evidence[]
+  moderationLog    ModerationAction[]
+  reports          AbuseReport[]
+}
+
+/* ------------------------------ Leaders ------------------------------- */
+
+model Leader {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  displayName   String
+  /// Aliases/alternate spellings help ingestion entity-resolution.
+  aliases       String[]
+  bio           String?
+  /// Only information already public; no home addresses, family members, minors, health data.
+  publicProfileUrls String[]
+  status        LeaderStatus @default(ACTIVE)
+  /// Tradition is descriptive metadata, never used as a scoring input.
+  tradition     String?
+  country       String?
+  /// Right-of-reply contact handle (organisation press/legal address), verified by LEGAL role.
+  replyContact  String?
+  /// Verified representative of the subject may post a Statement of Record.
+  statementOfRecord String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  affiliations  Affiliation[]
+  claims        Claim[]
+  incidents     Incident[]
+  reviews       Review[]
+  transcripts   Transcript[]
+  scores        ScoreSnapshot[]
+  takedowns     Takedown[]
+
+  @@index([displayName])
+}
+
+model Organization {
+  id            String   @id @default(cuid())
+  name          String
+  legalName     String?
+  registrationId String? // charity / EIN / company number
+  jurisdiction  String?
+  publishesAudit Boolean @default(false)
+  affiliations  Affiliation[]
+}
+
+model Affiliation {
+  id         String       @id @default(cuid())
+  leaderId   String
+  orgId      String
+  role       String       // founder, pastor, trustee…
+  startedAt  DateTime?
+  endedAt    DateTime?
+  leader     Leader       @relation(fields: [leaderId], references: [id])
+  org        Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([leaderId, orgId, role])
+}
+
+/* ----------------------- Claims / Prophecies -------------------------- */
+
+model Claim {
+  id            String       @id @default(cuid())
+  leaderId      String
+  submitterId   String
+  /// Verbatim quote — never paraphrase in this field.
+  statementText String
+  /// Neutral editor paraphrase shown in feed.
+  summary       String?
+  dateMade      DateTime
+  targetDate    DateTime?
+  /// 0–1 reviewer-rated: explicit, time-bound, falsifiable. <0.6 excluded from scoring.
+  specificity   Float        @default(0)
+  sourceUrl     String
+  /// Timestamp in the source (video/audio) so reviewers can verify context.
+  sourceTimestamp String?
+  outcome       ClaimOutcome @default(PENDING)
+  outcomeNote   String?
+  outcomeDecidedAt DateTime?
+  state         PublishState @default(DRAFT)
+  replyStatus   ReplyStatus  @default(NOT_OFFERED)
+  replyDeadline DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  leader        Leader       @relation(fields: [leaderId], references: [id])
+  submitter     User         @relation("ClaimSubmitter", fields: [submitterId], references: [id])
+  evidence      Evidence[]
+  votes         VerificationVote[]
+  rightOfReply  RightOfReply[]
+  versions      ClaimVersion[]
+
+  @@index([leaderId, state, outcome])
+  @@index([targetDate])
+}
+
+/// Full edit history so "quietly modified" prophecies are provable and PFPA's own edits auditable.
+model ClaimVersion {
+  id        String   @id @default(cuid())
+  claimId   String
+  snapshot  Json
+  editedBy  String
+  createdAt DateTime @default(now())
+  claim     Claim    @relation(fields: [claimId], references: [id])
+}
+
+/* ------------------------ Red flags / Incidents ----------------------- */
+
+model Incident {
+  id            String           @id @default(cuid())
+  leaderId      String
+  submitterId   String
+  category      IncidentCategory
+  dimension     ScoreDimension
+  title         String
+  /// Factual, neutral description: what, when, where, documented by whom.
+  description   String
+  occurredAt    DateTime
+  /// 1–5, anchored to a published rubric (see PRD §5.3).
+  severity      Int
+  /// True only for court findings, regulator actions, signed audits.
+  officialFinding Boolean        @default(false)
+  /// Allegation vs established-fact wording is enforced in UI.
+  isAllegationOnly Boolean       @default(true)
+  state         PublishState     @default(DRAFT)
+  replyStatus   ReplyStatus      @default(NOT_OFFERED)
+  replyDeadline DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  leader        Leader           @relation(fields: [leaderId], references: [id])
+  submitter     User             @relation("IncidentSubmitter", fields: [submitterId], references: [id])
+  evidence      Evidence[]
+  votes         VerificationVote[]
+  rightOfReply  RightOfReply[]
+
+  @@index([leaderId, dimension, state])
+}
+
+/* ------------------------------ Evidence ------------------------------ */
+
+model Evidence {
+  id            String       @id @default(cuid())
+  uploaderId    String
+  kind          EvidenceKind
+  url           String?
+  /// Permanent archived copy; hash proves it wasn't altered.
+  archiveUrl    String?
+  sha256        String?
+  tier          SourceTier
+  /// Normalised publisher domain/organisation, used to enforce "independent" sources.
+  publisherKey  String
+  /// Common ownership group (e.g. same media conglomerate / same syndicated wire story).
+  ownershipGroup String?
+  excerpt       String?
+  retrievedAt   DateTime     @default(now())
+  linkRotAt     DateTime?
+
+  claimId       String?
+  incidentId    String?
+  reviewId      String?
+  uploader      User         @relation(fields: [uploaderId], references: [id])
+  claim         Claim?       @relation(fields: [claimId], references: [id])
+  incident      Incident?    @relation(fields: [incidentId], references: [id])
+  review        Review?      @relation(fields: [reviewId], references: [id])
+
+  @@index([claimId])
+  @@index([incidentId])
+  @@index([publisherKey])
+}
+
+/// Exactly one target must be set (enforced in a DB CHECK constraint in the migration):
+/// ALTER TABLE "VerificationVote" ADD CONSTRAINT one_target CHECK
+///   (num_nonnulls("claimId","incidentId") = 1);
+model VerificationVote {
+  id          String    @id @default(cuid())
+  reviewerId  String
+  claimId     String?
+  incidentId  String?
+  value       VoteValue
+  rationale   String
+  /// Weighted by reviewer reputation at the time of the vote.
+  weight      Float     @default(1)
+  conflictDeclared Boolean @default(false)
+  createdAt   DateTime  @default(now())
+
+  reviewer    User      @relation(fields: [reviewerId], references: [id])
+  claim       Claim?    @relation(fields: [claimId], references: [id])
+  incident    Incident? @relation(fields: [incidentId], references: [id])
+
+  @@unique([reviewerId, claimId])
+  @@unique([reviewerId, incidentId])
+}
+
+/* --------------------- Community reviews & audits --------------------- */
+
+model Review {
+  id          String       @id @default(cuid())
+  leaderId    String
+  authorId    String
+  kind        ReviewKind
+  title       String
+  body        String
+  /// Structured payload: BITE item ratings, financial checklist answers, etc.
+  structured  Json?
+  state       PublishState @default(DRAFT)
+  createdAt   DateTime     @default(now())
+
+  leader      Leader       @relation(fields: [leaderId], references: [id])
+  author      User         @relation(fields: [authorId], references: [id])
+  /// Rule: a review cannot leave DRAFT with zero Evidence rows (service-layer + trigger).
+  evidence    Evidence[]
+  biteItems   BiteItem[]
+
+  @@index([leaderId, kind, state])
+}
+
+model BiteItem {
+  id        String   @id @default(cuid())
+  reviewId  String
+  category  String   // BEHAVIOR | INFORMATION | THOUGHT | EMOTIONAL
+  indicator String   // e.g. "Requires permission for major life decisions"
+  /// 0 absent · 1 mild · 2 systematic · 3 coercive/enforced
+  rating    Int
+  review    Review   @relation(fields: [reviewId], references: [id])
+}
+
+/* ------------------------- Legal / safety flow ------------------------- */
+
+model RightOfReply {
+  id          String     @id @default(cuid())
+  claimId     String?
+  incidentId  String?
+  sentAt      DateTime   @default(now())
+  responseText String?
+  respondedAt DateTime?
+  publishedWithItem Boolean @default(true)
+  claim       Claim?     @relation(fields: [claimId], references: [id])
+  incident    Incident?  @relation(fields: [incidentId], references: [id])
+}
+
+model Takedown {
+  id          String         @id @default(cuid())
+  leaderId    String?
+  targetType  String         // CLAIM | INCIDENT | REVIEW | PROFILE
+  targetId    String
+  grounds     String
+  requesterEmail String
+  status      TakedownStatus @default(OPEN)
+  /// Contested content is flagged DISPUTED (not deleted) pending LEGAL decision.
+  decidedBy   String?
+  decisionNote String?
+  createdAt   DateTime       @default(now())
+  leader      Leader?        @relation(fields: [leaderId], references: [id])
+}
+
+model AbuseReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  targetType String
+  targetId   String
+  reason     String
+  createdAt  DateTime @default(now())
+  reporter   User     @relation(fields: [reporterId], references: [id])
+}
+
+model ModerationAction {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  targetType String
+  targetId  String
+  reason    String
+  createdAt DateTime @default(now())
+  actor     User     @relation(fields: [actorId], references: [id])
+}
+
+/* ---------------------- Scores (immutable history) --------------------- */
+
+model ScoreSnapshot {
+  id                 String   @id @default(cuid())
+  leaderId           String
+  riskScore          Int?     // null => insufficient data
+  band               String
+  confidence         Float
+  dimensions         Json     // DimensionResult[]
+  methodologyVersion String
+  computedAt         DateTime @default(now())
+  leader             Leader   @relation(fields: [leaderId], references: [id])
+
+  @@index([leaderId, computedAt])
+}
+
+/* ------------------ Transcripts + semantic search (pgvector) ----------- */
+
+model Transcript {
+  id         String   @id @default(cuid())
+  leaderId   String
+  sourceUrl  String
+  platform   String   // youtube, podcast, facebook…
+  title      String?
+  language   String   @default("en")
+  publishedAt DateTime?
+  fetchedAt  DateTime @default(now())
+  leader     Leader   @relation(fields: [leaderId], references: [id])
+  chunks     TranscriptChunk[]
+
+  @@unique([sourceUrl])
+}
+
+model TranscriptChunk {
+  id           String   @id @default(cuid())
+  transcriptId String
+  idx          Int
+  startSec     Int?
+  endSec       Int?
+  text         String
+  embedding    Unsupported("vector(1536)")?
+  /// Candidate flag from the NLP "prediction detector"; humans still must verify.
+  candidateClaim Boolean @default(false)
+  transcript   Transcript @relation(fields: [transcriptId], references: [id])
+
+  @@index([transcriptId, idx])
+  // Raw SQL in migration: CREATE INDEX ON "TranscriptChunk" USING hnsw (embedding vector_cosine_ops);
+}
