@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 
 /**
@@ -51,35 +52,55 @@ export function toPublicResponse(replyStatus: string, deadline: Date | null, rep
   }
 }
 
-export async function getPublicClaim(id: string) {
-  const c = await prisma.claim.findFirst({
-    where: { id, state: { in: [...PUBLIC_STATES] } },
-    select: {
-      id: true, statementText: true, summary: true, dateMade: true, targetDate: true, sourceUrl: true, sourceTimestamp: true,
-      outcome: true, outcomeNote: true, outcomeDecidedAt: true, specificity: true, state: true,
-      replyStatus: true, replyDeadline: true,
-      leader: { select: { slug: true, displayName: true } },
-      evidence: { select: evidenceSelect, orderBy: { retrievedAt: "asc" } },
-      rightOfReply: { select: replySelect },
-    },
-  });
-  if (!c) return null;
+const claimSelect = {
+  id: true, statementText: true, summary: true, dateMade: true, targetDate: true, sourceUrl: true, sourceTimestamp: true,
+  outcome: true, outcomeNote: true, outcomeDecidedAt: true, specificity: true, state: true,
+  replyStatus: true, replyDeadline: true,
+  leader: { select: { slug: true, displayName: true } },
+  evidence: { select: evidenceSelect, orderBy: { retrievedAt: "asc" as const } },
+  rightOfReply: { select: replySelect },
+} satisfies Prisma.ClaimSelect;
+
+const incidentSelect = {
+  id: true, title: true, description: true, category: true, dimension: true, occurredAt: true, severity: true,
+  officialFinding: true, isAllegationOnly: true, state: true, replyStatus: true, replyDeadline: true,
+  leader: { select: { slug: true, displayName: true } },
+  evidence: { select: evidenceSelect, orderBy: { retrievedAt: "asc" as const } },
+  rightOfReply: { select: replySelect },
+} satisfies Prisma.IncidentSelect;
+
+function mapClaim(c: Prisma.ClaimGetPayload<{ select: typeof claimSelect }>) {
   const { rightOfReply, replyStatus, replyDeadline, state, ...rest } = c;
   return { ...rest, disputed: state === "DISPUTED", response: toPublicResponse(replyStatus, replyDeadline, rightOfReply) };
 }
-
-export async function getPublicIncident(id: string) {
-  const i = await prisma.incident.findFirst({
-    where: { id, state: { in: [...PUBLIC_STATES] } },
-    select: {
-      id: true, title: true, description: true, category: true, dimension: true, occurredAt: true, severity: true,
-      officialFinding: true, isAllegationOnly: true, state: true, replyStatus: true, replyDeadline: true,
-      leader: { select: { slug: true, displayName: true } },
-      evidence: { select: evidenceSelect, orderBy: { retrievedAt: "asc" } },
-      rightOfReply: { select: replySelect },
-    },
-  });
-  if (!i) return null;
+function mapIncident(i: Prisma.IncidentGetPayload<{ select: typeof incidentSelect }>) {
   const { rightOfReply, replyStatus, replyDeadline, state, ...rest } = i;
   return { ...rest, disputed: state === "DISPUTED", response: toPublicResponse(replyStatus, replyDeadline, rightOfReply) };
+}
+
+export async function getPublicClaim(id: string) {
+  const c = await prisma.claim.findFirst({ where: { id, state: { in: [...PUBLIC_STATES] } }, select: claimSelect });
+  return c ? mapClaim(c) : null;
+}
+
+export async function getPublicIncident(id: string) {
+  const i = await prisma.incident.findFirst({ where: { id, state: { in: [...PUBLIC_STATES] } }, select: incidentSelect });
+  return i ? mapIncident(i) : null;
+}
+
+/** One query (plus its includes) for a whole page of a leader's public claims, newest first. */
+export async function listPublicClaims(leaderId: string, take: number, skip: number) {
+  const rows = await prisma.claim.findMany({
+    where: { leaderId, state: { in: [...PUBLIC_STATES] } },
+    select: claimSelect, orderBy: [{ dateMade: "desc" }, { id: "asc" }], take, skip,
+  });
+  return rows.map(mapClaim);
+}
+
+export async function listPublicIncidents(leaderId: string, take: number, skip: number) {
+  const rows = await prisma.incident.findMany({
+    where: { leaderId, state: { in: [...PUBLIC_STATES] } },
+    select: incidentSelect, orderBy: [{ occurredAt: "desc" }, { id: "asc" }], take, skip,
+  });
+  return rows.map(mapIncident);
 }
