@@ -5,7 +5,7 @@
   "scripts": {
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "test:integration": "tsx tests/verification.integration.ts && tsx tests/vote-route.integration.ts && tsx tests/score-route.integration.ts && tsx tests/takedown-route.integration.ts && tsx tests/restore-reject.integration.ts && tsx tests/takedown-request.integration.ts && tsx tests/ingestion.integration.ts && tsx tests/reply-windows.integration.ts && tsx tests/right-of-reply.integration.ts && tsx tests/subject-reply.integration.ts && tsx tests/notification.integration.ts && tsx tests/email-template.test.ts && tsx tests/auth.integration.ts && tsx tests/reply-review.integration.ts && tsx tests/public-items.integration.ts && tsx tests/public-leader.integration.ts && tsx tests/cookie-auth.integration.ts && tsx tests/verification-queue.integration.ts",
+    "test:integration": "tsx tests/verification.integration.ts && tsx tests/vote-route.integration.ts && tsx tests/score-route.integration.ts && tsx tests/takedown-route.integration.ts && tsx tests/restore-reject.integration.ts && tsx tests/takedown-request.integration.ts && tsx tests/ingestion.integration.ts && tsx tests/reply-windows.integration.ts && tsx tests/right-of-reply.integration.ts && tsx tests/subject-reply.integration.ts && tsx tests/notification.integration.ts && tsx tests/email-template.test.ts && tsx tests/auth.integration.ts && tsx tests/reply-review.integration.ts && tsx tests/public-items.integration.ts && tsx tests/public-leader.integration.ts && tsx tests/cookie-auth.integration.ts && tsx tests/verification-queue.integration.ts && tsx tests/takedown-queue.integration.ts",
     "session:create": "tsx --env-file=.env scripts/create-session.ts"
   },
   "devDependencies": {
