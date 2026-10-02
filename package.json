@@ -5,7 +5,7 @@
   "scripts": {
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "test:integration": "tsx tests/verification.integration.ts && tsx tests/vote-route.integration.ts"
+    "test:integration": "tsx tests/verification.integration.ts && tsx tests/vote-route.integration.ts && tsx tests/score-route.integration.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
