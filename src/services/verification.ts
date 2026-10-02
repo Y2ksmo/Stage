@@ -161,6 +161,8 @@ export class VerificationService {
     targetType: TargetType,
     targetId: string,
     db: Prisma.TransactionClient | typeof prisma = prisma,
+    /** Re-evaluate a DISPUTED item from scratch (as if IN_REVIEW) instead of leaving it untouched. */
+    reopen = false,
   ): Promise<VerificationResult> {
     const now = new Date();
     if (targetType === "CLAIM") {
@@ -171,7 +173,7 @@ export class VerificationService {
       if (!c) throw new Error(`Claim not found: ${targetId}`);
       const needsSpecificity = c.outcome === "FAILED" || c.outcome === "MODIFIED";
       const r = evaluate({
-        state: c.state,
+        state: reopen ? "IN_REVIEW" : c.state,
         evidence: c.evidence,
         votes: c.votes,
         replyStatus: c.replyStatus,
@@ -192,7 +194,7 @@ export class VerificationService {
     });
     if (!inc) throw new Error(`Incident not found: ${targetId}`);
     const r = evaluate({
-      state: inc.state,
+      state: reopen ? "IN_REVIEW" : inc.state,
       evidence: inc.evidence,
       votes: inc.votes,
       replyStatus: inc.replyStatus,
