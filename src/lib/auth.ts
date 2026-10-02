@@ -32,6 +32,14 @@ export async function revokeAllSessions(userId: string) {
 
 export const SESSION_COOKIE = "pfpa_session";
 
+/** Attributes for the session cookie: HttpOnly (page scripts cannot read it), SameSite=Strict, Secure in production. */
+export const sessionCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  path: "/",
+});
+
 /** Validate a raw session token. Returns the user id and expiry, or null (unknown/revoked/expired/suspended). */
 export async function resolveSessionToken(token: string): Promise<{ userId: string; expiresAt: Date } | null> {
   if (typeof token !== "string" || token.length < 20) return null;

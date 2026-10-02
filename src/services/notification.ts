@@ -1,4 +1,4 @@
-import { getRightOfReplyEmailHtml } from "./emailTemplates";
+import { getLoginEmail, getRightOfReplyEmailHtml } from "./emailTemplates";
 import { VerificationError } from "./verification";
 
 export interface MailMessage {
@@ -80,5 +80,13 @@ export class NotificationService {
       replyUrl,
     });
     return { delivered: await deliver({ to: recipientEmail, ...mail }) };
+  }
+
+  /** Staff login email (6-digit code + confirm-page link). Throws on delivery failure; callers must not reveal that. */
+  static async sendLoginEmail(params: { recipientEmail: string; code: string; token: string; minutes: number }): Promise<{ delivered: boolean }> {
+    const baseUrl = (process.env.APP_BASE_URL ?? "").replace(/\/+$/, "");
+    if (!baseUrl || (isProd() && !baseUrl.startsWith("https://"))) throw new VerificationError("UPSTREAM", "APP_BASE_URL is not configured (https required in production).");
+    const mail = getLoginEmail({ code: params.code, linkUrl: `${baseUrl}/staff/login?token=${encodeURIComponent(params.token)}`, minutes: params.minutes });
+    return { delivered: await deliver({ to: params.recipientEmail, ...mail }) };
   }
 }

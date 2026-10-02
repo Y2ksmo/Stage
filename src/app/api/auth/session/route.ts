@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
-import { SESSION_COOKIE, isSameOriginRequest, resolveSessionToken, revokeSession } from "../../../../lib/auth";
+import { SESSION_COOKIE, isSameOriginRequest, resolveSessionToken, revokeSession, sessionCookieOptions } from "../../../../lib/auth";
 import { readJson } from "../../../../lib/http";
 
-const cookieBase = () => ({
-  httpOnly: true, // not readable by page scripts, so an XSS bug cannot steal the session
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict" as const,
-  path: "/",
-});
+const cookieBase = sessionCookieOptions;
 
 /**
  * Interim staff login: exchange a session token (minted by `npm run session:create`) for an HttpOnly cookie.

@@ -94,3 +94,35 @@ Redactie / Dossierbeheer
 
   return { subject, html, text };
 }
+
+export interface LoginEmailParams { code: string; linkUrl: string; minutes: number }
+
+/** Login email for staff: a 6-digit code (typed on any device) and a link (opens a confirm page, so mail scanners cannot burn it). */
+export function getLoginEmail({ code, linkUrl, minutes }: LoginEmailParams): { subject: string; html: string; text: string } {
+  const parsed = new URL(linkUrl);
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("linkUrl must be http(s).");
+  if (!/^\d{6}$/.test(code)) throw new Error("code must be 6 digits.");
+  const subject = "Uw inlogcode voor Dossier Platform";
+  const url = escapeHtml(parsed.toString());
+
+  const text = `Uw inlogcode: ${code}
+
+Voer deze code in op het inlogscherm, of open de volgende link en bevestig daar dat u wilt inloggen:
+${parsed.toString()}
+
+De code en de link zijn ${minutes} minuten geldig en kunnen maar één keer worden gebruikt. Heeft u dit niet aangevraagd? Negeer dit bericht; er is dan niets veranderd. Deel de code en link met niemand.
+`;
+  const html = `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#111827;background:#f9fafb;margin:0;padding:24px;">
+  <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:32px;">
+    <h2 style="margin-top:0;font-size:20px;">Uw inlogcode</h2>
+    <p style="font-size:32px;letter-spacing:6px;font-weight:700;margin:16px 0;">${escapeHtml(code)}</p>
+    <p>Voer deze code in op het inlogscherm, of gebruik de knop hieronder.</p>
+    <p style="text-align:center;margin:28px 0;"><a href="${url}" style="background:#000;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">Naar het inlogscherm</a></p>
+    <p style="font-size:12px;color:#6b7280;">De code en de link zijn ${minutes} minuten geldig en kunnen maar één keer worden gebruikt. Heeft u dit niet aangevraagd? Negeer dit bericht. Deel de code en link met niemand.</p>
+  </div>
+</body></html>
+`;
+  return { subject, html, text };
+}

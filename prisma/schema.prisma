@@ -150,7 +150,26 @@ model User {
   moderationLog    ModerationAction[]
   reports          AbuseReport[]
   sessions         Session[]
+  loginTokens      LoginToken[]
   repliesReviewed  RightOfReply[] @relation("ReplyReviewer")
+}
+
+/// One-time email login: a magic-link token and a 6-digit code, both bound to this row. Only keyed hashes are stored.
+model LoginToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  otpHash    String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  /// Wrong code guesses; the token is burned at the limit.
+  attempts   Int       @default(0)
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 /// Login sessions for API/staff access. Only the SHA-256 of the bearer token is stored.
