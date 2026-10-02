@@ -71,3 +71,6 @@ input[type=password], input[type=text] { width:100%; padding:.5rem; border:1px s
 .header-search input { width:100%; padding:.4rem .6rem; border:1px solid var(--line); border-radius:.35rem; background:transparent; color:inherit; font:inherit; font-size:.9rem; }
 .site-footer { max-width:60rem; margin:2rem auto 0; padding:1rem 1rem 2.5rem; border-top:1px solid var(--line); }
 .site-footer p { margin:.25rem 0; }
+.method-table { border-collapse:collapse; margin:.75rem 0; min-width:16rem; }
+.method-table th, .method-table td { text-align:left; padding:.35rem 1rem .35rem 0; border-bottom:1px solid var(--line); }
+.card ul { padding-left:1.2rem; } .card li { margin:.4rem 0; }

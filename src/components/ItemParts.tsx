@@ -14,6 +14,10 @@ export const CATEGORIES: Record<string, string> = {
   LEGAL_FINDING: "Juridische bevinding", BITE_BEHAVIOR: "Gedragscontrole", BITE_INFORMATION: "Informatiecontrole",
   BITE_THOUGHT: "Gedachtecontrole", BITE_EMOTIONAL: "Emotionele controle",
 };
+export const DIMENSIONS: Record<string, string> = {
+  PREDICTION: "Voorspellingen", FINANCIAL: "Financiële transparantie", BEHAVIORAL: "Gedrag & integriteit",
+  DOCTRINAL: "Eigen leer & normen", CULTIC: "Controle-indicatoren (BITE)",
+};
 const TIERS: Record<string, string> = { PRIMARY: "primaire bron", TIER1_MEDIA: "betrouwbaar medium", SECONDARY: "secundaire bron", SOCIAL: "sociale media" };
 
 export const fmtDate = (d: Date | null | undefined) => (d ? d.toLocaleDateString("nl-NL", { dateStyle: "long", timeZone: "UTC" }) : "");

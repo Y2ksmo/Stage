@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DISCLAIMER, Evidence, OUTCOMES, TakedownLink, fmtDate as fmt } from "../../../components/ItemParts";
+import { DIMENSIONS, DISCLAIMER, Evidence, OUTCOMES, TakedownLink, fmtDate as fmt } from "../../../components/ItemParts";
 import { RightOfReplyBlock } from "../../../components/RightOfReplyBlock";
 import { safeHref } from "../../../lib/safeUrl";
 import { getPublicLeaderMeta, getPublicLeaderProfile } from "../../../services/publicLeaders";
@@ -13,10 +13,6 @@ interface LeaderPageProps {
 }
 
 const BANDS: Record<string, string> = { LOW: "Laag", ELEVATED: "Verhoogd", HIGH: "Hoog", SEVERE: "Zeer hoog", INSUFFICIENT_DATA: "Onvoldoende data" };
-const DIMENSIONS: Record<string, string> = {
-  PREDICTION: "Voorspellingen", FINANCIAL: "Financiële transparantie", BEHAVIORAL: "Gedrag & integriteit",
-  DOCTRINAL: "Eigen leer & normen", CULTIC: "Controle-indicatoren (BITE)",
-};
 const num = (v: string | string[] | undefined) => {
   const s = Array.isArray(v) ? v[0] : v;
   return s && /^\d{1,6}$/.test(s) ? Number(s) : undefined;

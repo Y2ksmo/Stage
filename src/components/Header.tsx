@@ -9,6 +9,7 @@ export function Header() {
         <nav aria-label="Hoofdnavigatie" className="site-nav">
           <Link href="/">Home</Link>
           <Link href="/search">Zoeken</Link>
+          <Link href="/methodology">Methodologie</Link>
         </nav>
         <HeaderSearch />
       </div>
