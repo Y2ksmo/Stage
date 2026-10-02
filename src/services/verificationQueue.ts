@@ -1,4 +1,4 @@
-import type { EvidenceKind, ReplyStatus, SourceTier, VoteValue } from "@prisma/client";
+import type { EditorResolution, EvidenceKind, ReplyStatus, SourceTier, VoteValue } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { MIN_SPECIFICITY, VerificationError, checkPredictionTargetDate, evaluate, type TargetDateIssue, type TargetType } from "./verification";
 import { summarizeVerificationNl } from "./verificationStatus";
@@ -22,6 +22,10 @@ export interface QueueItem {
   rejectVotes: number;
   needsMoreVotes: number;
   myVote: "CONFIRM" | "REJECT" | "NEEDS_MORE" | null;
+  /** Conflicting votes awaiting an editor's decision. */
+  escalated: boolean;
+  /** An editor has already decided the vote conflict. */
+  editorResolved: "CONFIRM" | "REJECT" | null;
   /** Dutch description of what is still missing before the item can verify. */
   progress: string;
 }
@@ -46,7 +50,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
       where, orderBy: { createdAt: "asc" }, take: limit,
       select: {
         id: true, createdAt: true, statementText: true, dateMade: true, targetDate: true, sourceUrl: true, outcome: true, specificity: true,
-        replyStatus: true, replyDeadline: true, leader: { select: { displayName: true } },
+        replyStatus: true, replyDeadline: true, editorResolution: true, leader: { select: { displayName: true } },
         evidence: { select: evidenceSelect }, votes: { select: voteSelect },
       },
     }),
@@ -54,7 +58,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
       where, orderBy: { createdAt: "asc" }, take: limit,
       select: {
         id: true, createdAt: true, title: true, description: true, occurredAt: true,
-        replyStatus: true, replyDeadline: true, leader: { select: { displayName: true } },
+        replyStatus: true, replyDeadline: true, editorResolution: true, leader: { select: { displayName: true } },
         evidence: { select: evidenceSelect }, votes: { select: voteSelect },
       },
     }),
@@ -65,7 +69,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
     leaderName: string,
     evidence: Array<{ publisherKey: string; ownershipGroup: string | null; tier: SourceTier; kind: EvidenceKind; url: string | null; archiveUrl: string | null; sha256: string | null }>,
     votes: Array<{ reviewerId: string; value: VoteValue; conflictDeclared: boolean }>,
-    reply: { replyStatus: ReplyStatus; replyDeadline: Date | null },
+    reply: { replyStatus: ReplyStatus; replyDeadline: Date | null; editorResolution: EditorResolution | null },
     specificityOk: boolean,
     targetDateIssue?: TargetDateIssue,
   ): QueueItem => {
@@ -78,6 +82,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
       replyRequired: itemType === "INCIDENT",
       specificityOk,
       targetDateIssue,
+      editorResolution: reply.editorResolution,
       now,
     });
     const counted = votes.filter((v) => !v.conflictDeclared);
@@ -89,6 +94,8 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
       rejectVotes: counted.filter((v) => v.value === "REJECT").length,
       needsMoreVotes: counted.filter((v) => v.value === "NEEDS_MORE").length,
       myVote: votes.find((v) => v.reviewerId === userId)?.value ?? null,
+      escalated: result.escalated,
+      editorResolved: result.editorResolved,
       progress: summarizeVerificationNl(result),
     };
   };
@@ -107,4 +114,9 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
     })),
   ];
   return items.sort((a, b) => a._sort - b._sort).slice(0, limit).map(({ _sort, ...rest }) => rest);
+}
+
+/** The viewer's role, so a page can decide which staff actions to offer. */
+export async function getStaffRole(userId: string) {
+  return (await prisma.user.findUnique({ where: { id: userId }, select: { role: true } }))?.role ?? null;
 }

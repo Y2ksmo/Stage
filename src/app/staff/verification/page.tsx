@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { LogoutButton, StaffLogin } from "../../../components/StaffSession";
 import { StaffNav } from "../../../components/StaffNav";
+import { ConflictResolution } from "../../../components/ConflictResolution";
 import { VoteAction } from "../../../components/VoteAction";
 import { currentSession } from "../../../lib/staffSession";
 import { safeHref } from "../../../lib/safeUrl";
-import { listVerificationQueue } from "../../../services/verificationQueue";
+import { getStaffRole, listVerificationQueue } from "../../../services/verificationQueue";
 import { VerificationError } from "../../../services/verification";
 
 export const metadata: Metadata = { title: "Verificatie-wachtrij", robots: { index: false, follow: false } };
@@ -26,8 +27,10 @@ export default async function VerificationQueuePage() {
   }
 
   let queue;
+  let role: string | null = null;
   try {
     queue = await listVerificationQueue(session.userId, QUEUE_LIMIT);
+    role = await getStaffRole(session.userId);
   } catch (e) {
     if (e instanceof VerificationError && e.code === "FORBIDDEN") {
       return (
@@ -99,7 +102,13 @@ export default async function VerificationQueuePage() {
                 Stemmen: {q.confirmVotes} bevestigd • {q.rejectVotes} afgewezen • {q.needsMoreVotes} meer bewijs nodig
               </p>
               <p className="muted small">{q.progress}</p>
-              <VoteAction itemId={q.itemId} itemType={q.itemType} myVote={q.myVote} />
+              {q.escalated && (role === "EDITOR" || role === "ADMIN")
+                ? <ConflictResolution itemId={q.itemId} itemType={q.itemType} />
+                : q.escalated
+                  ? <p className="small"><strong>Tegenstrijdige stemmen:</strong> een redacteur beslist. Verdere stemmen zijn niet nodig.</p>
+                  : q.editorResolved === "CONFIRM"
+                    ? <p className="small">Een redacteur heeft de stemmen beslecht; verdere stemmen zijn niet nodig. Het item wacht op de overige eisen hierboven.</p>
+                    : <VoteAction itemId={q.itemId} itemType={q.itemType} myVote={q.myVote} />}
             </article>
           );
         })

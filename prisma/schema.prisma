@@ -110,6 +110,12 @@ enum ReplyStatus {
 }
 
 /// Editorial review of a subject's reply before it is shown publicly.
+/// An editor's decision on an item whose reviewer votes conflict. CONFIRM replaces only the vote requirement.
+enum EditorResolution {
+  CONFIRM
+  REJECT
+}
+
 enum ReplyReviewStatus {
   PENDING
   APPROVED
@@ -236,6 +242,10 @@ model Claim {
   outcome       ClaimOutcome @default(PENDING)
   outcomeNote   String?
   outcomeDecidedAt DateTime?
+  editorResolution EditorResolution?
+  resolvedAt       DateTime?
+  resolvedById     String?
+  resolutionNote   String?
   state         PublishState @default(DRAFT)
   replyStatus   ReplyStatus  @default(NOT_OFFERED)
   replyDeadline DateTime?
@@ -281,6 +291,10 @@ model Incident {
   officialFinding Boolean        @default(false)
   /// Allegation vs established-fact wording is enforced in UI.
   isAllegationOnly Boolean       @default(true)
+  editorResolution EditorResolution?
+  resolvedAt       DateTime?
+  resolvedById     String?
+  resolutionNote   String?
   state         PublishState     @default(DRAFT)
   replyStatus   ReplyStatus      @default(NOT_OFFERED)
   replyDeadline DateTime?

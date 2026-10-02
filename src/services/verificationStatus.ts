@@ -18,11 +18,11 @@ const missingNl = (m: MissingRequirement): string => {
  * Dutch, human-readable status for reviewers. Rendered from the SAME structured result the verification
  * engine uses to decide, so the text can never disagree with the actual rules.
  */
-export function summarizeVerificationNl(r: Pick<VerificationResult, "state" | "missing" | "escalated" | "ignoredEvidence">): string {
+export function summarizeVerificationNl(r: Pick<VerificationResult, "state" | "missing" | "escalated" | "ignoredEvidence"> & { editorResolved?: "CONFIRM" | "REJECT" | null }): string {
   switch (r.state) {
     case "VERIFIED": return "Geverifieerd en openbaar.";
     case "DISPUTED": return "Betwist: tijdelijk uit de score gehaald; een juridische beoordeling loopt.";
-    case "REJECTED": return "Afgewezen door de reviewers.";
+    case "REJECTED": return r.editorResolved === "REJECT" ? "Afgewezen door een redactioneel besluit." : "Afgewezen door de reviewers.";
     case "WITHDRAWN": return "Ingetrokken.";
     case "DRAFT": return "Concept: nog niet ingediend voor beoordeling.";
   }
@@ -30,6 +30,7 @@ export function summarizeVerificationNl(r: Pick<VerificationResult, "state" | "m
   if (r.escalated) return "Tegenstrijdige stemmen: voorgelegd aan een redacteur voor een besluit.";
 
   const parts: string[] = [];
+  if (r.editorResolved === "CONFIRM") parts.push("Een redacteur heeft de tegenstrijdige stemmen beslecht (bevestigd); de overige eisen blijven gelden.");
   parts.push(r.missing.length === 0 ? "Voldoet aan alle eisen; wordt automatisch geverifieerd." : `Nog nodig: ${r.missing.map(missingNl).join("; ")}.`);
 
   const { unarchived, unsupported } = r.ignoredEvidence;

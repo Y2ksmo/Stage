@@ -51,6 +51,8 @@ export interface VerificationResult {
   missing: MissingRequirement[];
   /** Conflicting confirm/reject votes: the item stays in review until an editor decides. */
   escalated: boolean;
+  /** Set when an editor has resolved a vote conflict (CONFIRM replaces only the vote requirement). */
+  editorResolved: "CONFIRM" | "REJECT" | null;
   /** Evidence that exists but does NOT count: not archived, or social/screenshot only. */
   ignoredEvidence: { unarchived: number; unsupported: number };
 }
@@ -90,6 +92,8 @@ interface EvalInput {
   specificityOk: boolean;
   /** Claims only: set when a FAILED outcome's target date is missing or not yet passed. */
   targetDateIssue?: TargetDateIssue;
+  /** An editor's decision on conflicting votes. CONFIRM waives only the vote requirement; REJECT rejects. */
+  editorResolution?: "CONFIRM" | "REJECT" | null;
   now: Date;
 }
 
@@ -120,21 +124,28 @@ export function evaluate(i: EvalInput): VerificationResult {
     reason,
     missing,
     escalated,
+    editorResolved: i.editorResolution ?? null,
     ignoredEvidence,
   });
 
   // Votes only move items that are currently under review; never silently un-verify or un-dispute.
   if (i.state !== "IN_REVIEW") return out(i.state, `No change: item is ${i.state}.`);
 
-  if (confirms >= REQUIRED_CONFIRMS && rejects >= REQUIRED_REJECTS) {
-    return out("IN_REVIEW", "Conflicting votes: escalated to an editor.", [], true);
+  if (i.editorResolution === "REJECT") return out("REJECTED", "Rejected by editorial decision.");
+  const editorConfirmed = i.editorResolution === "CONFIRM";
+
+  if (!editorConfirmed) {
+    if (confirms >= REQUIRED_CONFIRMS && rejects >= REQUIRED_REJECTS) {
+      return out("IN_REVIEW", "Conflicting votes: escalated to an editor.", [], true);
+    }
+    if (rejects >= REQUIRED_REJECTS) return out("REJECTED", "Rejected by reviewer consensus.");
   }
-  if (rejects >= REQUIRED_REJECTS) return out("REJECTED", "Rejected by reviewer consensus.");
 
   const missing: MissingRequirement[] = [];
   if (independent < REQUIRED_SOURCES) missing.push({ code: "SOURCES", count: REQUIRED_SOURCES - independent });
   else if (!hasStrong) missing.push({ code: "STRONG_SOURCE" });
-  if (confirms < REQUIRED_CONFIRMS) missing.push({ code: "CONFIRMS", count: REQUIRED_CONFIRMS - confirms });
+  // An editor's CONFIRM stands in for the vote requirement only; every other requirement still applies.
+  if (!editorConfirmed && confirms < REQUIRED_CONFIRMS) missing.push({ code: "CONFIRMS", count: REQUIRED_CONFIRMS - confirms });
   if (!i.specificityOk) missing.push({ code: "SPECIFICITY" });
   if (i.targetDateIssue) missing.push({ code: "TARGET_DATE", issue: i.targetDateIssue });
 
@@ -235,6 +246,7 @@ export class VerificationService {
         replyRequired: false,
         specificityOk: !needsSpecificity || c.specificity >= MIN_SPECIFICITY,
         targetDateIssue: checkPredictionTargetDate(c.outcome, c.targetDate, now),
+        editorResolution: c.editorResolution,
         now,
       });
       if (r.state !== c.state) {
@@ -256,6 +268,7 @@ export class VerificationService {
       replyDeadline: inc.replyDeadline,
       replyRequired: true, // incidents always require right of reply
       specificityOk: true,
+      editorResolution: inc.editorResolution,
       now,
     });
     if (r.state !== inc.state) {
