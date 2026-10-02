@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { DISCLAIMER } from "../components/ItemParts";
 import { SearchInput } from "../components/SearchInput";
 import { getRecentLeaders, getRecentPublicItems } from "../services/publicDirectory";
 
 export default async function HomePage() {
+  // Render per request: this page reads live data and must not be frozen at build time.
+  await connection();
   const [leaders, recent] = await Promise.all([getRecentLeaders(6), getRecentPublicItems(5)]);
 
   return (
