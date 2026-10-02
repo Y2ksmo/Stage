@@ -136,6 +136,20 @@ model User {
   evidence         Evidence[]
   moderationLog    ModerationAction[]
   reports          AbuseReport[]
+  sessions         Session[]
+}
+
+/// Login sessions for API/staff access. Only the SHA-256 of the bearer token is stored.
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /* ------------------------------ Leaders ------------------------------- */
