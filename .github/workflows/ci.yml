@@ -1,0 +1,64 @@
+name: CI
+
+# Runs on every pull request, and is reused by the deploy workflow so main can never ship without these checks.
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      # A throwaway database with the pgvector extension. Tests write fixtures, so NEVER point them at a real database.
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pfpa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/pfpa_test?schema=public
+      NODE_ENV: test
+      AUTH_SECRET: ci-dummy-secret-key-for-testing-only-32chars
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies (also generates the Prisma client)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Apply migrations to the test database (from empty)
+        run: npm run db:deploy
+
+      - name: Schema matches migrations
+        run: npm run db:drift
+
+      - name: Integration tests
+        run: npm test
+
+      # The build needs no database: pages that read data render per request.
+      - name: Production build
+        run: npm run build
+        env:
+          NODE_ENV: production
