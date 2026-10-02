@@ -14,7 +14,7 @@ datasource db {
   extensions = [vector]
 }
 
-/* ------------------------------- Enums -------------------------------- */
+// ------------------------------- Enums --------------------------------
 
 enum Role {
   READER
@@ -172,7 +172,7 @@ enum ModerationActionKind {
   RESOLVE_TAKEDOWN
 }
 
-/* ------------------------------- Users -------------------------------- */
+// ------------------------------- Users --------------------------------
 
 model User {
   id               String   @id @default(cuid())
@@ -194,7 +194,7 @@ model User {
   reports          AbuseReport[]
 }
 
-/* ------------------------------ Leaders ------------------------------- */
+// ------------------------------ Leaders -------------------------------
 
 model Leader {
   id            String       @id @default(cuid())
@@ -250,7 +250,7 @@ model Affiliation {
   @@unique([leaderId, orgId, role])
 }
 
-/* ----------------------- Claims / Prophecies -------------------------- */
+// ----------------------- Claims / Prophecies --------------------------
 
 model Claim {
   id            String       @id @default(cuid())
@@ -297,7 +297,7 @@ model ClaimVersion {
   claim     Claim    @relation(fields: [claimId], references: [id])
 }
 
-/* ------------------------ Red flags / Incidents ----------------------- */
+// ------------------------ Red flags / Incidents -----------------------
 
 model Incident {
   id            String           @id @default(cuid())
@@ -330,7 +330,7 @@ model Incident {
   @@index([leaderId, dimension, state])
 }
 
-/* ------------------------------ Evidence ------------------------------ */
+// ------------------------------ Evidence ------------------------------
 
 model Evidence {
   id            String       @id @default(cuid())
@@ -385,7 +385,7 @@ model VerificationVote {
   @@unique([reviewerId, incidentId])
 }
 
-/* --------------------- Community reviews & audits --------------------- */
+// --------------------- Community reviews & audits ---------------------
 
 model Review {
   id          String       @id @default(cuid())
@@ -418,7 +418,7 @@ model BiteItem {
   review    Review   @relation(fields: [reviewId], references: [id])
 }
 
-/* ------------------------- Legal / safety flow ------------------------- */
+// ------------------------- Legal / safety flow -------------------------
 
 model RightOfReply {
   id          String     @id @default(cuid())
@@ -469,7 +469,7 @@ model ModerationAction {
   actor      User                 @relation(fields: [actorId], references: [id])
 }
 
-/* ---------------------- Scores (immutable history) --------------------- */
+// ---------------------- Scores (immutable history) ---------------------
 
 model ScoreSnapshot {
   id                 String   @id @default(cuid())
@@ -485,7 +485,7 @@ model ScoreSnapshot {
   @@index([leaderId, computedAt])
 }
 
-/* ------------------ Transcripts + semantic search (pgvector) ----------- */
+// ------------------ Transcripts + semantic search (pgvector) -----------
 
 model Transcript {
   id         String   @id @default(cuid())
