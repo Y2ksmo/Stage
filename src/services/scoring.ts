@@ -8,7 +8,8 @@ import {
   type ScoreInput,
   type ScoreResult,
 } from "../scoring/riskScore";
-import { countIndependentSources } from "./verification";
+import type { PublishState } from "@prisma/client";
+import { countIndependentSources } from "./evidence";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -78,4 +79,20 @@ export async function recomputeLeaderScore(db: Db, leaderId: string): Promise<Sc
 
 export async function latestScore(db: Db, leaderId: string) {
   return db.scoreSnapshot.findFirst({ where: { leaderId }, orderBy: { computedAt: "desc" } });
+}
+
+/**
+ * Call after ANY state change on a Claim or Incident (verification, takedown, editor action).
+ * Only VERIFIED items are scored, so entering or leaving VERIFIED changes the score;
+ * e.g. VERIFIED -> DISPUTED/WITHDRAWN removes the item from it.
+ */
+export async function handleItemStatusChange(
+  db: Db,
+  leaderId: string,
+  previousStatus: PublishState,
+  newStatus: PublishState,
+) {
+  if (previousStatus !== newStatus && (previousStatus === "VERIFIED" || newStatus === "VERIFIED")) {
+    await recomputeLeaderScore(db, leaderId);
+  }
 }
