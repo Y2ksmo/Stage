@@ -43,7 +43,7 @@ async function main() {
   env.PFPA_DEV_USER_ID = editor.id;
 
   // queue shows the pending reply with context
-  const queue = (await (await listPending(new Request("http://x"))).json()).replies as Array<{ replyId: string; leaderName: string }>;
+  const queue = (await (await listPending(new Request("http://x?limit=500"))).json()).replies as Array<{ replyId: string; leaderName: string }>;
   assert.ok(queue.some((q) => q.replyId === r1.id && q.leaderName === "RR"));
   assert.ok(!queue.some((q) => q.replyId === declined.id));
 

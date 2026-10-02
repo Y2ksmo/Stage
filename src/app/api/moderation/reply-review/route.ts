@@ -8,7 +8,9 @@ export async function GET(request: Request) {
   const actorId = await getAuthenticatedUserId(request);
   if (!actorId) return NextResponse.json({ error: "Niet geauthenticeerd." }, { status: 401 });
   try {
-    return NextResponse.json({ success: true, replies: await listPendingReplies(actorId) });
+    const raw = new URL(request.url).searchParams.get("limit");
+    const limit = raw && /^\d{1,3}$/.test(raw) ? Number(raw) : undefined; // default 100, capped at 500 by the service
+    return NextResponse.json({ success: true, replies: await listPendingReplies(actorId, limit) });
   } catch (e) {
     return errorResponse(e, "list pending replies failed");
   }

@@ -276,13 +276,13 @@ async function requireReviewer(tx: Prisma.TransactionClient, actorId: string) {
 }
 
 /** Replies waiting for editorial review, oldest first. */
-export async function listPendingReplies(actorId: string) {
+export async function listPendingReplies(actorId: string, limit = 100) {
   return prisma.$transaction(async (tx) => {
     await requireReviewer(tx, actorId);
     const rows = await tx.rightOfReply.findMany({
       where: { reviewStatus: "PENDING" },
       orderBy: { respondedAt: "asc" },
-      take: 100,
+      take: Math.min(500, Math.max(1, Math.floor(limit))),
       select: {
         id: true, claimId: true, incidentId: true, responseText: true, evidenceUrls: true, respondedAt: true,
         claim: { select: { statementText: true, leader: { select: { displayName: true } } } },
