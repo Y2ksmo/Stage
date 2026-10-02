@@ -3,6 +3,16 @@ import { prisma } from "../lib/prisma";
 import { countIndependentSources, type EvidenceLite } from "./evidence";
 import { handleItemStatusChange } from "./scoring";
 
+export type VerificationErrorCode = "INVALID" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT";
+export const HTTP_STATUS: Record<VerificationErrorCode, number> = {
+  INVALID: 400, UNAUTHORIZED: 401, FORBIDDEN: 403, NOT_FOUND: 404, CONFLICT: 409,
+};
+export class VerificationError extends Error {
+  constructor(public code: VerificationErrorCode, message: string) {
+    super(message);
+  }
+}
+
 export type TargetType = "CLAIM" | "INCIDENT";
 
 export interface VerificationResult {
@@ -110,25 +120,25 @@ export class VerificationService {
     conflictDeclared?: boolean;
   }): Promise<VerificationResult> {
     const { reviewerId, targetType, targetId, value, rationale } = params;
-    if (!rationale.trim()) throw new Error("A rationale is required.");
+    if (!rationale.trim()) throw new VerificationError("INVALID", "A rationale is required.");
 
     return prisma.$transaction(
       async (tx) => {
         const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
         if (!reviewer || !REVIEWER_ROLES.includes(reviewer.role)) {
-          throw new Error("Unauthorized: reviewer role required.");
+          throw new VerificationError("FORBIDDEN", "Reviewer role required.");
         }
         if (reviewer.suspendedUntil && reviewer.suspendedUntil > new Date()) {
-          throw new Error("Unauthorized: account suspended.");
+          throw new VerificationError("FORBIDDEN", "Account suspended.");
         }
 
         const target =
           targetType === "CLAIM"
             ? await tx.claim.findUnique({ where: { id: targetId }, select: { submitterId: true, state: true } })
             : await tx.incident.findUnique({ where: { id: targetId }, select: { submitterId: true, state: true } });
-        if (!target) throw new Error(`${targetType} not found: ${targetId}`);
-        if (target.submitterId === reviewerId) throw new Error("Reviewers cannot verify their own submissions.");
-        if (target.state !== "IN_REVIEW") throw new Error(`Item is ${target.state}; votes are only accepted while IN_REVIEW.`);
+        if (!target) throw new VerificationError("NOT_FOUND", `${targetType} not found.`);
+        if (target.submitterId === reviewerId) throw new VerificationError("FORBIDDEN", "Reviewers cannot verify their own submissions.");
+        if (target.state !== "IN_REVIEW") throw new VerificationError("CONFLICT", `Item is ${target.state}; votes are only accepted while IN_REVIEW.`);
 
         const ref = targetType === "CLAIM" ? { claimId: targetId } : { incidentId: targetId };
         const data = {

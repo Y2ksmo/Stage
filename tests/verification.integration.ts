@@ -21,7 +21,7 @@ async function main() {
   await prisma.evidence.create({ data: ev("a.example", "PRIMARY", "grpA") });
   await VerificationService.submitForReview("CLAIM", claim.id);
 
-  await assert.rejects(VerificationService.castVote({ reviewerId: sub.id, targetType: "CLAIM", targetId: claim.id, value: "CONFIRM", rationale: "x" }), /Unauthorized/);
+  await assert.rejects(VerificationService.castVote({ reviewerId: sub.id, targetType: "CLAIM", targetId: claim.id, value: "CONFIRM", rationale: "x" }), /Reviewer role required/);
   let res = await VerificationService.castVote({ reviewerId: r1.id, targetType: "CLAIM", targetId: claim.id, value: "CONFIRM", rationale: "ok" });
   assert.equal(res.state, "IN_REVIEW");
   // same reviewer re-voting must not double count
