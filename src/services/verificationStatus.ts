@@ -8,6 +8,7 @@ const missingNl = (m: MissingRequirement): string => {
     case "STRONG_SOURCE": return "minstens één primaire bron of betrouwbaar medium";
     case "CONFIRMS": return `${m.count} extra bevestigende ${plural(m.count, "stem", "stemmen")}`;
     case "SPECIFICITY": return "een specifiekere voorspelling (specificiteit ≥ 0,6) voor de uitkomst 'niet uitgekomen' of 'aangepast'";
+    case "TARGET_DATE": return m.issue.kind === "MISSING" ? "een streefdatum bij de voorspelling (vereist voor de uitkomst 'niet uitgekomen')" : `afloop van de streefdatum (${m.issue.date.toLocaleDateString("nl-NL", { dateStyle: "long", timeZone: "UTC" })})`;
     case "REPLY_NOT_OFFERED": return "wederhoor aanbieden en afronden";
     case "REPLY_WINDOW_OPEN": return "afloop of afronding van de wederhoortermijn";
   }

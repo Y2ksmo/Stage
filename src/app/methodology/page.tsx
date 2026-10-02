@@ -41,7 +41,7 @@ export default function MethodologyPage() {
           <li><strong>Gearchiveerd en vastgelegd.</strong> Een bron telt alleen mee met een permanente archiefkopie en een controlegetal (hash), zodat achteraf wijzigen of verdwijnen niets kan veranderen.</li>
           <li><strong>Telt niet mee:</strong> niet-gearchiveerde links, screenshots en berichten van sociale media (ook niet als aanvulling om het aantal op te hogen).</li>
           <li><strong>Twee bevestigende stemmen van onafhankelijke reviewers.</strong> Reviewers beoordelen nooit hun eigen inzendingen, verklaren dat zij geen belangenconflict hebben en motiveren elke stem. Reviewers zien elkaars stemmen niet individueel, alleen aantallen. Bij tegenstrijdige stemmen blijft het item in beoordeling en wordt het aan een redacteur voorgelegd.</li>
-          <li><strong>Voorspellingen:</strong> voor de uitkomst “niet uitgekomen” of “achteraf aangepast” moet de uitspraak expliciet en toetsbaar zijn (specificiteit ten minste 0,6, op een schaal van 0 tot 1).</li>
+          <li><strong>Voorspellingen:</strong> voor de uitkomst “niet uitgekomen” of “achteraf aangepast” moet de uitspraak expliciet en toetsbaar zijn (specificiteit ten minste 0,6, op een schaal van 0 tot 1). Voor “niet uitgekomen” moet bovendien een streefdatum zijn vastgelegd en moet de dag van die datum zijn afgelopen.</li>
           <li><strong>Incidenten:</strong> het wederhoor (zie hieronder) moet zijn afgerond voordat het item kan worden geverifieerd.</li>
         </ul>
       </section>

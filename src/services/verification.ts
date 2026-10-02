@@ -15,12 +15,28 @@ export class VerificationError extends Error {
 
 export type TargetType = "CLAIM" | "INCIDENT";
 
+/** Why a failed prediction cannot be verified yet. */
+export type TargetDateIssue = { kind: "MISSING" } | { kind: "NOT_PASSED"; date: Date };
+
+/**
+ * A prediction can only be verified as FAILED once its target date has passed. The date must exist, and
+ * the day it names must have ENDED (UTC): a prediction due on 2 October is not failed at 00:01 on 2 October.
+ * Other outcomes are not subject to this rule. Returns undefined when the rule is satisfied.
+ */
+export function checkPredictionTargetDate(outcome: string, targetDate: Date | null, now: Date): TargetDateIssue | undefined {
+  if (outcome !== "FAILED") return undefined;
+  if (!targetDate) return { kind: "MISSING" };
+  const endOfTargetDay = Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate() + 1);
+  return now.getTime() >= endOfTargetDay ? undefined : { kind: "NOT_PASSED", date: targetDate };
+}
+
 /** What an IN_REVIEW item still lacks before it can verify. Structured so any language can render it. */
 export type MissingRequirement =
   | { code: "SOURCES"; count: number }
   | { code: "STRONG_SOURCE" }
   | { code: "CONFIRMS"; count: number }
   | { code: "SPECIFICITY" }
+  | { code: "TARGET_DATE"; issue: TargetDateIssue }
   | { code: "REPLY_NOT_OFFERED" }
   | { code: "REPLY_WINDOW_OPEN" };
 
@@ -45,6 +61,7 @@ const missingToEnglish = (m: MissingRequirement): string => {
     case "STRONG_SOURCE": return "at least one primary or tier-1 source";
     case "CONFIRMS": return `${m.count} more reviewer confirmation(s)`;
     case "SPECIFICITY": return `claim specificity >= ${MIN_SPECIFICITY} for a failed/modified outcome`;
+    case "TARGET_DATE": return m.issue.kind === "MISSING" ? "a target date on the prediction (required for a failed outcome)" : `the target date (${m.issue.date.toISOString().slice(0, 10)}) to have passed`;
     case "REPLY_NOT_OFFERED": return "right-of-reply offered and its window closed or answered";
     case "REPLY_WINDOW_OPEN": return "right-of-reply window to close";
   }
@@ -71,6 +88,8 @@ interface EvalInput {
   replyRequired: boolean;
   /** Claims only: failed/modified outcomes need an adequately specific prediction. */
   specificityOk: boolean;
+  /** Claims only: set when a FAILED outcome's target date is missing or not yet passed. */
+  targetDateIssue?: TargetDateIssue;
   now: Date;
 }
 
@@ -117,6 +136,7 @@ export function evaluate(i: EvalInput): VerificationResult {
   else if (!hasStrong) missing.push({ code: "STRONG_SOURCE" });
   if (confirms < REQUIRED_CONFIRMS) missing.push({ code: "CONFIRMS", count: REQUIRED_CONFIRMS - confirms });
   if (!i.specificityOk) missing.push({ code: "SPECIFICITY" });
+  if (i.targetDateIssue) missing.push({ code: "TARGET_DATE", issue: i.targetDateIssue });
 
   const replyOpen =
     i.replyStatus === "OFFERED" && !!i.replyDeadline && i.replyDeadline > i.now;
@@ -214,6 +234,7 @@ export class VerificationService {
         replyDeadline: c.replyDeadline,
         replyRequired: false,
         specificityOk: !needsSpecificity || c.specificity >= MIN_SPECIFICITY,
+        targetDateIssue: checkPredictionTargetDate(c.outcome, c.targetDate, now),
         now,
       });
       if (r.state !== c.state) {

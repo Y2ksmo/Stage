@@ -1,6 +1,6 @@
 import type { EvidenceKind, ReplyStatus, SourceTier, VoteValue } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { MIN_SPECIFICITY, VerificationError, evaluate, type TargetType } from "./verification";
+import { MIN_SPECIFICITY, VerificationError, checkPredictionTargetDate, evaluate, type TargetDateIssue, type TargetType } from "./verification";
 import { summarizeVerificationNl } from "./verificationStatus";
 
 const VOTER_ROLES = ["REVIEWER", "EDITOR", "ADMIN"] as const;
@@ -45,7 +45,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
     prisma.claim.findMany({
       where, orderBy: { createdAt: "asc" }, take: limit,
       select: {
-        id: true, createdAt: true, statementText: true, dateMade: true, sourceUrl: true, outcome: true, specificity: true,
+        id: true, createdAt: true, statementText: true, dateMade: true, targetDate: true, sourceUrl: true, outcome: true, specificity: true,
         replyStatus: true, replyDeadline: true, leader: { select: { displayName: true } },
         evidence: { select: evidenceSelect }, votes: { select: voteSelect },
       },
@@ -67,6 +67,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
     votes: Array<{ reviewerId: string; value: VoteValue; conflictDeclared: boolean }>,
     reply: { replyStatus: ReplyStatus; replyDeadline: Date | null },
     specificityOk: boolean,
+    targetDateIssue?: TargetDateIssue,
   ): QueueItem => {
     const result = evaluate({
       state: "IN_REVIEW",
@@ -76,6 +77,7 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
       replyDeadline: reply.replyDeadline,
       replyRequired: itemType === "INCIDENT",
       specificityOk,
+      targetDateIssue,
       now,
     });
     const counted = votes.filter((v) => !v.conflictDeclared);
@@ -94,7 +96,8 @@ export async function listVerificationQueue(userId: string, limit = 50): Promise
   const items: Array<QueueItem & { _sort: number }> = [
     ...claims.map((c) => ({
       ...build("CLAIM", c.id, { title: c.statementText, description: null, occurredOrMadeAt: c.dateMade, sourceUrl: c.sourceUrl, proposedOutcome: c.outcome, specificity: c.specificity },
-        c.leader.displayName, c.evidence, c.votes, c, !(c.outcome === "FAILED" || c.outcome === "MODIFIED") || c.specificity >= MIN_SPECIFICITY),
+        c.leader.displayName, c.evidence, c.votes, c, !(c.outcome === "FAILED" || c.outcome === "MODIFIED") || c.specificity >= MIN_SPECIFICITY,
+        checkPredictionTargetDate(c.outcome, c.targetDate, now)),
       _sort: c.createdAt.getTime(),
     })),
     ...incidents.map((i) => ({

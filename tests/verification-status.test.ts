@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { evaluate } from "../src/services/verification";
+import { checkPredictionTargetDate, evaluate } from "../src/services/verification";
 import { summarizeVerificationNl } from "../src/services/verificationStatus";
 
 type Ev = Parameters<typeof evaluate>[0]["evidence"][number];
@@ -39,4 +39,29 @@ assert.match(nl({ state: "DRAFT" }), /Concept/);
 
 // the English API message still derives from the same data (no drift, API unchanged)
 assert.match(evaluate({ ...base }).reason, /^Incomplete: needs 2 more independent archived source\(s\); 2 more reviewer confirmation\(s\)\.$/);
+// --- target-date rule for failed predictions ---
+const D = (iso: string) => new Date(iso);
+assert.equal(checkPredictionTargetDate("FULFILLED", null, D("2026-01-01")), undefined);          // only FAILED is subject to the rule
+assert.equal(checkPredictionTargetDate("PENDING", D("2099-01-01T00:00:00Z"), D("2026-01-01")), undefined);
+assert.deepEqual(checkPredictionTargetDate("FAILED", null, D("2026-01-01")), { kind: "MISSING" });
+assert.equal(checkPredictionTargetDate("FAILED", D("2099-01-01T00:00:00Z"), D("2026-01-01"))?.kind, "NOT_PASSED");
+// the day named by the target date must have ENDED (UTC)
+const target = D("2026-10-02T00:00:00Z");
+assert.equal(checkPredictionTargetDate("FAILED", target, D("2026-10-02T00:01:00Z"))?.kind, "NOT_PASSED");   // not failed at 00:01 on the day itself
+assert.equal(checkPredictionTargetDate("FAILED", target, D("2026-10-02T23:59:59Z"))?.kind, "NOT_PASSED");
+assert.equal(checkPredictionTargetDate("FAILED", target, D("2026-10-03T00:00:00Z")), undefined);          // first moment after the day
+assert.equal(checkPredictionTargetDate("FAILED", D("2026-10-02T15:30:00Z"), D("2026-10-03T00:00:00Z")), undefined); // time-of-day in the stored date is irrelevant
+
+// it blocks verification, and the messages explain why (English API text + Dutch UI text)
+const full = { evidence: [ev("a"), ev("b")], votes: [vote("r1", "CONFIRM"), vote("r2", "CONFIRM")] };
+const future = checkPredictionTargetDate("FAILED", D("2026-06-15T00:00:00Z"), base.now);
+const blocked = evaluate({ ...base, ...full, targetDateIssue: future });
+assert.equal(blocked.state, "IN_REVIEW");
+assert.equal(blocked.reason, "Incomplete: needs the target date (2026-06-15) to have passed.");
+assert.equal(summarizeVerificationNl(blocked), "Nog nodig: afloop van de streefdatum (15 juni 2026).");
+const undated = evaluate({ ...base, ...full, targetDateIssue: { kind: "MISSING" } });
+assert.equal(undated.state, "IN_REVIEW");
+assert.match(undated.reason, /a target date on the prediction/);
+assert.match(summarizeVerificationNl(undated), /een streefdatum bij de voorspelling/);
+assert.equal(evaluate({ ...base, ...full, targetDateIssue: undefined }).state, "VERIFIED"); // no issue => verifies as before
 console.log("VERIFICATION STATUS TESTS PASSED");
