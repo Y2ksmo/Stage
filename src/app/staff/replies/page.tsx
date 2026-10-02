@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { LogoutButton, StaffLogin } from "../../../components/StaffSession";
 import { ReplyReviewAction } from "../../../components/ReplyReviewAction";
-import { SESSION_COOKIE, resolveSessionToken } from "../../../lib/auth";
+import { StaffNav } from "../../../components/StaffNav";
+import { currentSession } from "../../../lib/staffSession";
 import { safeHref } from "../../../lib/safeUrl";
 import { listPendingReplies } from "../../../services/rightOfReply";
 import { VerificationError } from "../../../services/verification";
@@ -12,9 +12,7 @@ export const metadata: Metadata = { title: "Wederhoor-reacties beoordelen", robo
 const fmt = (d: Date | null) => (d ? d.toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }) + " (UTC)" : "");
 
 export default async function ReplyReviewPage() {
-  // cookies() is async in this Next.js version.
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  const session = token ? await resolveSessionToken(token) : null;
+  const session = await currentSession();
 
   if (!session) {
     return (
@@ -50,6 +48,7 @@ export default async function ReplyReviewPage() {
         <h1>Wederhoor-reacties beoordelen</h1>
         <LogoutButton />
       </div>
+      <StaffNav />
       <p className="muted small">
         Goedgekeurde reacties worden openbaar naast het item getoond. Afwijzen houdt de reactie achter (de tekst blijft bewaard) en vereist een reden. Een besluit kan later worden herzien.
       </p>

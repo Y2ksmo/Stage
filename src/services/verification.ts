@@ -29,7 +29,7 @@ const REPLY_DONE: ReplyStatus[] = ["RECEIVED", "DECLINED", "EXPIRED"];
 const REQUIRED_SOURCES = 2;
 const REQUIRED_CONFIRMS = 2;
 const REQUIRED_REJECTS = 2;
-const MIN_SPECIFICITY = 0.6;
+export const MIN_SPECIFICITY = 0.6;
 
 interface VoteLite {
   reviewerId: string;

@@ -44,3 +44,4 @@ input[type=password], input[type=text] { width:100%; padding:.5rem; border:1px s
 .btn-ok { background:#15803d; } .btn-danger { background:#b91c1c; }
 .btn-secondary { background:transparent; color:inherit; border:1px solid var(--line); }
 .reply-links { padding-left:1.2rem; font-size:.9rem; }
+.staff-nav { display:flex; gap:1rem; margin:.25rem 0 1rem; }
