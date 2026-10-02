@@ -383,12 +383,18 @@ model Takedown {
   targetId    String
   grounds     String
   requesterEmail String
+  requesterName  String?
+  /// Optional supporting links submitted by the requester (not scored, reviewed by LEGAL only).
+  evidenceUrls   String[]
   status      TakedownStatus @default(OPEN)
   /// Contested content is flagged DISPUTED (not deleted) pending LEGAL decision.
   decidedBy   String?
   decisionNote String?
   createdAt   DateTime       @default(now())
   leader      Leader?        @relation(fields: [leaderId], references: [id])
+
+  @@index([requesterEmail, createdAt])
+  @@index([targetType, targetId])
 }
 
 model AbuseReport {
