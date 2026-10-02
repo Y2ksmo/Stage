@@ -24,13 +24,15 @@ async function main() {
   assert.equal(await prisma.moderationAction.count({ where: { targetId: claim.id, action: "RIGHT_OF_REPLY_NOTICE_FAILED" } }), 1);
 
   // retry succeeds; email content is right
-  let sent: { to: string; subject: string; text: string } | null = null;
+  let sent: { to: string; subject: string; text: string; html?: string } | null = null;
   setMailTransport(async (m) => { sent = m; });
   assert.equal((await post({ itemType: "CLAIM", itemId: claim.id })).status, 200);
-  const m = sent as unknown as { to: string; subject: string; text: string };
+  const m = sent as unknown as { to: string; subject: string; text: string; html: string };
   assert.equal(m.to, "press@org.example");
   assert.match(m.text, /https:\/\/pfpa\.example\/reply\?token=[A-Za-z0-9_-]{40,}/);
-  assert.match(m.text, /14-day/);
+  assert.match(m.text, /Uiterste reactiedatum: \d+ \w+ 20\d\d om \d+:\d\d \(UTC\)/);
+  assert.match(m.subject, /^Verzoek tot wederhoor: Notice Leader/);
+  assert.match(m.html, /<a href="https:\/\/pfpa\.example\/reply\?token=[A-Za-z0-9_-]{40,}"/);
   assert.match(m.text, /A verbatim prophecy statement/);
   assert.ok(!m.text.includes("//reply")); // trailing slash in base URL normalised
 

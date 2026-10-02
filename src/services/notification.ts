@@ -1,10 +1,11 @@
-import { REPLY_WINDOW_DAYS } from "./constants";
+import { getRightOfReplyEmailHtml } from "./emailTemplates";
 import { VerificationError } from "./verification";
 
 export interface MailMessage {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }
 export type MailTransport = (message: MailMessage) => Promise<void>;
 
@@ -42,6 +43,7 @@ async function deliver(message: MailMessage) {
 
 export interface SendRightOfReplyNoticeParams {
   recipientEmail: string;
+  recipientName?: string;
   leaderName: string;
   itemTitle: string;
   rawToken: string;
@@ -62,23 +64,16 @@ export class NotificationService {
     }
     const replyUrl = `${baseUrl}/reply?token=${encodeURIComponent(rawToken)}`;
 
-    await deliver({
-      to: recipientEmail,
-      subject: `Notice: Right of Reply regarding ${leaderName}`,
-      text: `
-Dear Subject / Representative,
-
-An item concerning ${leaderName} ("${itemTitle}") is under formal review on our platform. Nothing has been published as established fact.
-
-You have a ${REPLY_WINDOW_DAYS}-day Right of Reply window ending on ${deadline.toUTCString()}.
-
-To submit your statement or supporting documents, or to decline to respond, use this personal, single-use link (do not forward it):
-${replyUrl}
-
-Your reply, if you submit one, is published alongside the item. If you do not respond, the review continues after the window closes and this is recorded neutrally as "no response received"; it does not affect any assessment.
-
-Moderation & Verification Team
-`.trim(),
+    const deadlineDateStr =
+      new Intl.DateTimeFormat("nl-NL", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" })
+        .format(deadline)
+        .replace(", ", " om ") + " (UTC)";
+    const mail = getRightOfReplyEmailHtml({
+      recipientName: params.recipientName,
+      itemTitle: `${leaderName}: ${itemTitle}`,
+      deadlineDateStr,
+      replyUrl,
     });
+    await deliver({ to: recipientEmail, ...mail });
   }
 }
