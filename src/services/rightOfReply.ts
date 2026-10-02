@@ -1,10 +1,13 @@
+import { createHash, randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { VerificationError, type TargetType } from "./verification";
+import { VerificationError, VerificationService, type TargetType } from "./verification";
 
 export const REPLY_WINDOW_DAYS = 14;
 const ALLOWED_ROLES = ["ADMIN", "LEGAL", "EDITOR"] as const;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
 
 export interface TriggerReplyWindowParams {
   itemType: TargetType;
@@ -64,7 +67,11 @@ export async function triggerRightOfReply(params: TriggerReplyWindowParams) {
       if (upd.count === 0) throw new VerificationError("CONFLICT", "Item is gewijzigd; probeer opnieuw.");
 
       // The response (if any) will attach to this row later.
-      await tx.rightOfReply.create({ data: { ...ref, sentAt: now } });
+      // One-time secret for the subject. Only its hash is stored; the plaintext goes to the notice.
+      const replyToken = randomBytes(32).toString("base64url");
+      await tx.rightOfReply.create({
+        data: { ...ref, sentAt: now, tokenHash: hashToken(replyToken), recipientEmail: recipient },
+      });
 
       await tx.moderationAction.create({
         data: {
@@ -76,7 +83,82 @@ export async function triggerRightOfReply(params: TriggerReplyWindowParams) {
         },
       });
 
-      return { itemType, itemId, leaderId: item.leaderId, replyStatus: "OFFERED" as const, replyDeadline: deadline, recipient };
+      return { itemType, itemId, leaderId: item.leaderId, replyStatus: "OFFERED" as const, replyDeadline: deadline, recipient, replyToken };
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
+}
+
+const MAX_REPLY_CHARS = 10_000;
+const MAX_URLS = 10;
+
+export interface RecordReplyParams {
+  /** One-time secret from the reply notice. It identifies the item and proves the caller is the recipient. */
+  token: string;
+  action: "ACCEPT" | "DECLINE"; // ACCEPT = submit a response, DECLINE = explicitly decline to respond
+  replyText?: string;
+  evidenceUrls?: string[];
+}
+
+function cleanUrls(urls: string[] | undefined): string[] {
+  const out = (urls ?? []).map((u) => {
+    let p: URL;
+    try {
+      p = new URL(u);
+    } catch {
+      throw new VerificationError("INVALID", "Ongeldige URL in evidenceUrls.");
+    }
+    if (p.protocol !== "http:" && p.protocol !== "https:") throw new VerificationError("INVALID", "Alleen http(s)-links zijn toegestaan.");
+    return p.toString();
+  });
+  if (out.length > MAX_URLS) throw new VerificationError("INVALID", `Maximaal ${MAX_URLS} links.`);
+  return out;
+}
+
+/**
+ * The subject (or their representative) answers the right-of-reply notice. Unauthenticated by design,
+ * authorised by the one-time token. The reply is published beside the item; it is NOT verification
+ * evidence and never changes the score. Answering (or declining) closes the window, which may be the
+ * last missing requirement, so the item is re-evaluated afterwards.
+ * The RightOfReply row is the audit record: ModerationAction needs a staff actor, and the subject is not one.
+ */
+export async function recordSubjectReply(params: RecordReplyParams) {
+  const { token, action } = params;
+  if (typeof token !== "string" || token.length < 20) throw new VerificationError("NOT_FOUND", "Ongeldige of onbekende link.");
+  if (action !== "ACCEPT" && action !== "DECLINE") throw new VerificationError("INVALID", "action moet ACCEPT of DECLINE zijn.");
+  const replyText = params.replyText?.trim() || null;
+  if (action === "ACCEPT" && !replyText) throw new VerificationError("INVALID", "Een reactie (replyText) is verplicht bij ACCEPT.");
+  if (replyText && replyText.length > MAX_REPLY_CHARS) throw new VerificationError("INVALID", `Reactie mag maximaal ${MAX_REPLY_CHARS} tekens zijn.`);
+  const evidenceUrls = cleanUrls(params.evidenceUrls);
+
+  return prisma.$transaction(
+    async (tx) => {
+      const row = await tx.rightOfReply.findUnique({ where: { tokenHash: hashToken(token) } });
+      // Same response for unknown tokens: don't reveal which links exist.
+      if (!row || (!row.claimId && !row.incidentId)) throw new VerificationError("NOT_FOUND", "Ongeldige of onbekende link.");
+
+      const itemType: TargetType = row.claimId ? "CLAIM" : "INCIDENT";
+      const itemId = (row.claimId ?? row.incidentId) as string;
+      const now = new Date();
+      const target = action === "ACCEPT" ? ("RECEIVED" as const) : ("DECLINED" as const);
+
+      // Conditional update: only while still OFFERED and before the deadline (also races safely with the expiry job).
+      const where = { id: itemId, replyStatus: "OFFERED" as const, replyDeadline: { gt: now } };
+      const upd =
+        itemType === "CLAIM"
+          ? await tx.claim.updateMany({ where, data: { replyStatus: target } })
+          : await tx.incident.updateMany({ where, data: { replyStatus: target } });
+      if (upd.count === 0) {
+        throw new VerificationError("CONFLICT", "De wederhoor is al afgerond of de termijn is verstreken.");
+      }
+
+      await tx.rightOfReply.update({
+        where: { id: row.id },
+        data: { responseText: replyText, respondedAt: now, evidenceUrls, publishedWithItem: action === "ACCEPT" },
+      });
+
+      const verification = await VerificationService.evaluateAndSetState(itemType, itemId, tx);
+      return { itemType, itemId, replyStatus: target, itemState: verification.state };
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
   );

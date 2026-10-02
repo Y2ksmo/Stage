@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   }
   try {
     const result = await triggerRightOfReply({ itemType, itemId, userId, recipientEmail });
+    // replyToken is returned ONCE so the notice (or the staff member sending it) can include the reply link.
     return NextResponse.json({ success: true, result });
   } catch (e) {
     return errorResponse(e, "trigger right of reply failed");

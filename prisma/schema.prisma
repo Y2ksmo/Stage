@@ -372,6 +372,11 @@ model RightOfReply {
   responseText String?
   respondedAt DateTime?
   publishedWithItem Boolean @default(true)
+  /// SHA-256 of the one-time reply token sent to the subject (the token itself is never stored).
+  tokenHash   String?    @unique
+  recipientEmail String?
+  /// Links the subject attached to their response (displayed, never counted as verification evidence).
+  evidenceUrls String[]
   claim       Claim?     @relation(fields: [claimId], references: [id])
   incident    Incident?  @relation(fields: [incidentId], references: [id])
 }
