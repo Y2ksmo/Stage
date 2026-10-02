@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/reply-windows",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}
