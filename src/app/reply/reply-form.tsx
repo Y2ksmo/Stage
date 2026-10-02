@@ -51,7 +51,7 @@ export function ReplyForm({ token }: { token: string }) {
         <h2>{status.choice === "ACCEPT" ? "Uw reactie is ontvangen" : "Uw keuze is vastgelegd"}</h2>
         <p>
           {status.choice === "ACCEPT"
-            ? "Uw reactie wordt naast het betreffende item gepubliceerd. Dank u."
+            ? "Uw reactie wordt door onze redactie gecontroleerd en daarna naast het betreffende item gepubliceerd. Dank u."
             : "Wij hebben vastgelegd dat u niet wilt reageren. De beoordeling gaat verder."}
         </p>
       </div>
@@ -77,7 +77,7 @@ export function ReplyForm({ token }: { token: string }) {
         <>
           <label htmlFor="replyText">Uw reactie</label>
           <textarea id="replyText" value={text} maxLength={MAX_TEXT} onChange={(e) => setText(e.target.value)} disabled={sending} required />
-          <div className="muted">{text.length} / {MAX_TEXT} tekens. Uw reactie wordt openbaar naast het item getoond.</div>
+          <div className="muted">{text.length} / {MAX_TEXT} tekens. Na een redactionele controle wordt uw reactie naast het item getoond.</div>
 
           <label htmlFor="urls">Links naar documentatie (optioneel, één per regel, max {MAX_URLS})</label>
           <textarea id="urls" className="short" value={urls} onChange={(e) => setUrls(e.target.value)} disabled={sending} placeholder="https://" />

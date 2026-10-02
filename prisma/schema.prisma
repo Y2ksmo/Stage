@@ -109,6 +109,13 @@ enum ReplyStatus {
   EXPIRED
 }
 
+/// Editorial review of a subject's reply before it is shown publicly.
+enum ReplyReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TakedownStatus {
   OPEN
   UNDER_REVIEW
@@ -137,6 +144,7 @@ model User {
   moderationLog    ModerationAction[]
   reports          AbuseReport[]
   sessions         Session[]
+  repliesReviewed  RightOfReply[] @relation("ReplyReviewer")
 }
 
 /// Login sessions for API/staff access. Only the SHA-256 of the bearer token is stored.
@@ -391,6 +399,12 @@ model RightOfReply {
   recipientEmail String?
   /// Links the subject attached to their response (displayed, never counted as verification evidence).
   evidenceUrls String[]
+  /// null = nothing to review (declined / no reply yet). The reply is shown publicly only when APPROVED.
+  reviewStatus ReplyReviewStatus?
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewNotes  String?
+  reviewedBy   User?      @relation("ReplyReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   claim       Claim?     @relation(fields: [claimId], references: [id])
   incident    Incident?  @relation(fields: [incidentId], references: [id])
 }

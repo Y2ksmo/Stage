@@ -42,7 +42,7 @@ Uiterste reactiedatum: ${deadlineDateStr}
 U kunt uw reactie of onderbouwende documentatie indienen via onderstaande unieke en veilige link:
 ${parsed.toString()}
 
-Via deze link kunt u ook aangeven dat u geen gebruik wenst te maken van het aanbod tot wederhoor. Reageert u niet, dan gaat de beoordeling na afloop van de termijn door; dit wordt neutraal vermeld als "geen reactie ontvangen" en heeft geen invloed op de beoordeling. Een ingediende reactie wordt naast het item gepubliceerd.
+Via deze link kunt u ook aangeven dat u geen gebruik wenst te maken van het aanbod tot wederhoor. Reageert u niet, dan gaat de beoordeling na afloop van de termijn door; dit wordt neutraal vermeld als "geen reactie ontvangen" en heeft geen invloed op de beoordeling. Een ingediende reactie wordt na een redactionele controle naast het item gepubliceerd.
 
 Let op: deze link is persoonlijk, eenmalig te gebruiken en geldig tot de genoemde uiterste reactiedatum. Deel de link niet.
 
@@ -71,7 +71,7 @@ Redactie / Dossierbeheer
     </div>
 
     <p style="margin-bottom: 24px;">
-      Via onderstaande knop kunt u uw officiële reactie indienen, eventuele bewijsstukken toevoegen, of het aanbod formeel afwijzen. Een ingediende reactie wordt naast het item gepubliceerd. Reageert u niet, dan wordt dit neutraal vermeld als &ldquo;geen reactie ontvangen&rdquo; en heeft het geen invloed op de beoordeling.
+      Via onderstaande knop kunt u uw officiële reactie indienen, eventuele bewijsstukken toevoegen, of het aanbod formeel afwijzen. Een ingediende reactie wordt na een redactionele controle naast het item gepubliceerd. Reageert u niet, dan wordt dit neutraal vermeld als &ldquo;geen reactie ontvangen&rdquo; en heeft het geen invloed op de beoordeling.
     </p>
 
     <div style="text-align: center; margin: 32px 0;">

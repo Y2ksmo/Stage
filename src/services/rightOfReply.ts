@@ -156,7 +156,14 @@ export async function recordSubjectReply(params: RecordReplyParams) {
 
       await tx.rightOfReply.update({
         where: { id: row.id },
-        data: { responseText: replyText, respondedAt: now, evidenceUrls, publishedWithItem: action === "ACCEPT" },
+        data: {
+          responseText: replyText,
+          respondedAt: now,
+          evidenceUrls,
+          // Never public until an editor approves it (see reviewSubjectReply).
+          publishedWithItem: false,
+          reviewStatus: action === "ACCEPT" ? "PENDING" : null,
+        },
       });
 
       const verification = await VerificationService.evaluateAndSetState(itemType, itemId, tx);
@@ -254,4 +261,97 @@ export async function describeReplyWindow(token: string): Promise<ReplyWindowVie
   if (!item.replyDeadline || item.replyDeadline <= new Date()) return { state: "EXPIRED", leaderName };
   const itemTitle = "title" in item ? item.title : (item.summary ?? item.statementText).slice(0, 140);
   return { state: "OPEN", leaderName, itemTitle, deadline: item.replyDeadline };
+}
+
+const REVIEW_ROLES = ["EDITOR", "LEGAL", "ADMIN"] as const;
+
+async function requireReviewer(tx: Prisma.TransactionClient, actorId: string) {
+  const actor = await tx.user.findUnique({ where: { id: actorId }, select: { role: true, suspendedUntil: true } });
+  if (!actor || (actor.suspendedUntil && actor.suspendedUntil > new Date())) {
+    throw new VerificationError("FORBIDDEN", "Niet geautoriseerd of account geschorst.");
+  }
+  if (!(REVIEW_ROLES as readonly string[]).includes(actor.role)) {
+    throw new VerificationError("FORBIDDEN", "Onvoldoende rechten om wederhoor-reacties te beoordelen.");
+  }
+}
+
+/** Replies waiting for editorial review, oldest first. */
+export async function listPendingReplies(actorId: string) {
+  return prisma.$transaction(async (tx) => {
+    await requireReviewer(tx, actorId);
+    const rows = await tx.rightOfReply.findMany({
+      where: { reviewStatus: "PENDING" },
+      orderBy: { respondedAt: "asc" },
+      take: 100,
+      select: {
+        id: true, claimId: true, incidentId: true, responseText: true, evidenceUrls: true, respondedAt: true,
+        claim: { select: { statementText: true, leader: { select: { displayName: true } } } },
+        incident: { select: { title: true, leader: { select: { displayName: true } } } },
+      },
+    });
+    return rows.map((r) => ({
+      replyId: r.id,
+      itemType: (r.claimId ? "CLAIM" : "INCIDENT") as TargetType,
+      itemId: (r.claimId ?? r.incidentId) as string,
+      leaderName: (r.claim ?? r.incident)?.leader.displayName ?? null,
+      itemTitle: r.incident?.title ?? r.claim?.statementText.slice(0, 140) ?? null,
+      responseText: r.responseText,
+      evidenceUrls: r.evidenceUrls,
+      respondedAt: r.respondedAt,
+    }));
+  });
+}
+
+/**
+ * Editorial decision on a subject's reply. APPROVED publishes it beside the item; REJECTED withholds it
+ * (the text is kept for the record) and requires a reason. A decision can be revised later, e.g. an approved
+ * reply found to defame a third party can be switched to REJECTED. The decision is audited in ModerationAction.
+ */
+export async function reviewSubjectReply(params: {
+  actorId: string;
+  replyId: string;
+  decision: "APPROVED" | "REJECTED";
+  notes?: string;
+}) {
+  const { actorId, replyId, decision } = params;
+  const notes = params.notes?.trim() || null;
+  if (decision !== "APPROVED" && decision !== "REJECTED") throw new VerificationError("INVALID", "decision moet APPROVED of REJECTED zijn.");
+  if (decision === "REJECTED" && !notes) throw new VerificationError("INVALID", "Een reden (notes) is verplicht bij afwijzen.");
+
+  return prisma.$transaction(
+    async (tx) => {
+      await requireReviewer(tx, actorId);
+      const row = await tx.rightOfReply.findUnique({
+        where: { id: replyId },
+        select: { reviewStatus: true, claimId: true, incidentId: true },
+      });
+      if (!row) throw new VerificationError("NOT_FOUND", "Reactie niet gevonden.");
+      if (!row.reviewStatus) throw new VerificationError("CONFLICT", "Er is geen ingediende reactie om te beoordelen.");
+      if (row.reviewStatus === decision) throw new VerificationError("CONFLICT", `Reactie is al ${decision}.`);
+
+      const upd = await tx.rightOfReply.updateMany({
+        where: { id: replyId, reviewStatus: row.reviewStatus },
+        data: {
+          reviewStatus: decision,
+          reviewedAt: new Date(),
+          reviewedById: actorId,
+          reviewNotes: notes,
+          publishedWithItem: decision === "APPROVED",
+        },
+      });
+      if (upd.count === 0) throw new VerificationError("CONFLICT", "Reactie is gewijzigd; probeer opnieuw.");
+
+      await tx.moderationAction.create({
+        data: {
+          actorId,
+          action: `RIGHT_OF_REPLY_REVIEW_${decision}`,
+          targetType: row.claimId ? "CLAIM" : "INCIDENT",
+          targetId: (row.claimId ?? row.incidentId) as string,
+          reason: `Reply ${replyId} ${decision}${notes ? `: ${notes}` : ""}`,
+        },
+      });
+      return { replyId, reviewStatus: decision, published: decision === "APPROVED" };
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+  );
 }
