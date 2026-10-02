@@ -224,3 +224,34 @@ export async function startReplyWindowAndNotify(params: TriggerReplyWindowParams
     recipient: started.recipient,
   };
 }
+
+export type ReplyWindowView =
+  | { state: "OPEN"; leaderName: string; itemTitle: string; deadline: Date }
+  | { state: "CLOSED"; leaderName: string }
+  | { state: "EXPIRED"; leaderName: string };
+
+/** Read-only lookup for the reply page. Returns null for unknown tokens (never reveals which exist). */
+export async function describeReplyWindow(token: string): Promise<ReplyWindowView | null> {
+  if (typeof token !== "string" || token.length < 20) return null;
+  const row = await prisma.rightOfReply.findUnique({ where: { tokenHash: hashToken(token) } });
+  if (!row || (!row.claimId && !row.incidentId)) return null;
+
+  const item = row.claimId
+    ? await prisma.claim.findUnique({
+        where: { id: row.claimId },
+        select: { replyStatus: true, replyDeadline: true, summary: true, statementText: true, leader: { select: { displayName: true } } },
+      })
+    : await prisma.incident.findUnique({
+        where: { id: row.incidentId as string },
+        select: { replyStatus: true, replyDeadline: true, title: true, leader: { select: { displayName: true } } },
+      });
+  if (!item) return null;
+
+  const leaderName = item.leader.displayName;
+  if (item.replyStatus !== "OFFERED") {
+    return item.replyStatus === "EXPIRED" ? { state: "EXPIRED", leaderName } : { state: "CLOSED", leaderName };
+  }
+  if (!item.replyDeadline || item.replyDeadline <= new Date()) return { state: "EXPIRED", leaderName };
+  const itemTitle = "title" in item ? item.title : (item.summary ?? item.statementText).slice(0, 140);
+  return { state: "OPEN", leaderName, itemTitle, deadline: item.replyDeadline };
+}
