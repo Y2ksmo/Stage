@@ -76,3 +76,11 @@ export async function getPublicLeaderProfile(idOrSlug: string, opts: { limit?: n
     page: { limit, offset, hasMoreClaims: offset + claims.length < totalClaims, hasMoreIncidents: offset + incidents.length < totalIncidents },
   };
 }
+
+/** Cheap lookup for page metadata (title/description) without loading the whole profile. */
+export async function getPublicLeaderMeta(idOrSlug: string) {
+  return prisma.leader.findFirst({
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    select: { displayName: true, bio: true },
+  });
+}
