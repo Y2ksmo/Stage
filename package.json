@@ -1,1 +1,23 @@
-{"name":"pfpa","private":true,"version":"0.1.0","scripts":{"db:migrate":"prisma migrate dev","db:generate":"prisma generate"},"devDependencies":{"@types/node":"^26.6.4","@types/react":"^19.3.0","prisma":"^6.19.3","tsx":"^4.23.15","typescript":"^7.0.2"},"dependencies":{"@prisma/client":"^6.19.3","next":"^16.3.8","react":"^19.3.0","react-dom":"^19.3.0"}}
+{
+  "name": "pfpa",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "test:integration": "tsx tests/verification.integration.ts && tsx tests/vote-route.integration.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "next": "^16.3.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}
