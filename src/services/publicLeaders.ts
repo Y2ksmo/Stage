@@ -81,6 +81,6 @@ export async function getPublicLeaderProfile(idOrSlug: string, opts: { limit?: n
 export async function getPublicLeaderMeta(idOrSlug: string) {
   return prisma.leader.findFirst({
     where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
-    select: { displayName: true, bio: true },
+    select: { id: true, displayName: true, bio: true },
   });
 }

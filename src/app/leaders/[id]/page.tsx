@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DISCLAIMER, Evidence, OUTCOMES, TakedownLink, fmtDate as fmt } from "../../../components/ItemParts";
 import { RightOfReplyBlock } from "../../../components/RightOfReplyBlock";
 import { safeHref } from "../../../lib/safeUrl";
 import { getPublicLeaderMeta, getPublicLeaderProfile } from "../../../services/publicLeaders";
@@ -11,18 +12,11 @@ interface LeaderPageProps {
   searchParams: Promise<{ limit?: string | string[]; offset?: string | string[] }>;
 }
 
-const DISCLAIMER =
-  "Samengesteld uit openbare, geciteerde bronnen volgens een gepubliceerde methodologie. Beschuldigingen zijn geen vastgestelde feiten. Deze pagina is geen oordeel over enig geloof of enige traditie.";
-
 const BANDS: Record<string, string> = { LOW: "Laag", ELEVATED: "Verhoogd", HIGH: "Hoog", SEVERE: "Zeer hoog", INSUFFICIENT_DATA: "Onvoldoende data" };
 const DIMENSIONS: Record<string, string> = {
   PREDICTION: "Voorspellingen", FINANCIAL: "Financiële transparantie", BEHAVIORAL: "Gedrag & integriteit",
   DOCTRINAL: "Eigen leer & normen", CULTIC: "Controle-indicatoren (BITE)",
 };
-const OUTCOMES: Record<string, string> = {
-  PENDING: "Nog open", FULFILLED: "Uitgekomen", FAILED: "Niet uitgekomen", RETRACTED: "Ingetrokken", MODIFIED: "Achteraf aangepast",
-};
-const fmt = (d: Date | null | undefined) => (d ? d.toLocaleDateString("nl-NL", { dateStyle: "long", timeZone: "UTC" }) : "");
 const num = (v: string | string[] | undefined) => {
   const s = Array.isArray(v) ? v[0] : v;
   return s && /^\d{1,6}$/.test(s) ? Number(s) : undefined;
@@ -133,7 +127,7 @@ export default async function LeaderProfilePage({ params, searchParams }: Leader
                     <span className="badge">{OUTCOMES[claim.outcome] ?? claim.outcome}</span>
                     {claim.disputed && <span className="badge badge-disputed">Betwist</span>}
                   </div>
-                  <blockquote className="statement">{claim.statementText}</blockquote>
+                  <blockquote className="statement"><Link href={`/claims/${claim.id}`}>{claim.statementText}</Link></blockquote>
                   {claim.summary && <p className="muted">{claim.summary}</p>}
                   <p className="muted small">
                     Gedaan op {fmt(claim.dateMade)}{claim.targetDate ? ` • streefdatum ${fmt(claim.targetDate)}` : ""}
@@ -152,7 +146,7 @@ export default async function LeaderProfilePage({ params, searchParams }: Leader
                   <span className="badge">{incident.isAllegationOnly ? "Beschuldiging, geen vastgesteld feit" : "Vastgesteld door officiële bevinding"}</span>
                   {incident.disputed && <span className="badge badge-disputed">Betwist</span>}
                 </div>
-                <h3>{incident.title}</h3>
+                <h3><Link href={`/incidents/${incident.id}`}>{incident.title}</Link></h3>
                 <p>{incident.description}</p>
                 <p className="muted small">Datum: {fmt(incident.occurredAt)} • ernst {incident.severity}/5</p>
                 {incident.disputed && <p className="small notice-note">Dit item wordt betwist en telt niet mee in de score.</p>}
@@ -171,29 +165,8 @@ export default async function LeaderProfilePage({ params, searchParams }: Leader
         )}
       </section>
 
+      <TakedownLink targetType="LEADER" targetId={leader.id} />
       <p className="muted small disclaimer">{DISCLAIMER}</p>
     </main>
-  );
-}
-
-function Evidence({ list }: { list: Array<{ url: string | null; archiveUrl: string | null; publisherKey: string; excerpt: string | null }> }) {
-  if (list.length === 0) return null;
-  return (
-    <details className="evidence">
-      <summary>Bronnen ({list.length})</summary>
-      <ul>
-        {list.map((e, i) => {
-          const href = safeHref(e.url);
-          const arc = safeHref(e.archiveUrl);
-          return (
-            <li key={`${e.publisherKey}-${i}`}>
-              {href ? <a href={href} rel="noopener noreferrer nofollow" target="_blank">{e.publisherKey}</a> : e.publisherKey}
-              {arc && <> • <a href={arc} rel="noopener noreferrer nofollow" target="_blank">archief</a></>}
-              {e.excerpt && <span className="muted small"> — “{e.excerpt}”</span>}
-            </li>
-          );
-        })}
-      </ul>
-    </details>
   );
 }
