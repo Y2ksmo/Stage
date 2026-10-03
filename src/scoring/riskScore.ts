@@ -88,10 +88,13 @@ export const WEIGHTS: Record<DimensionKey, number> = {
   CULTIC: 0.2,
 };
 
-const MIN_OVERALL_CONFIDENCE = 0.25;
+/** Below this overall confidence (or with fewer than 2 dimensions of data) no score is shown. */
+export const MIN_OVERALL_CONFIDENCE = 0.25;
+/** Score bands: [0, ELEVATED) low, [ELEVATED, HIGH) elevated, [HIGH, SEVERE) high, SEVERE and up severe. */
+export const BAND_THRESHOLDS = { ELEVATED: 25, HIGH: 50, SEVERE: 75 } as const;
 const MIN_DIMENSIONS_WITH_DATA = 2;
 const SEVERITY_WEIGHT: Record<Severity, number> = { 1: 0.1, 2: 0.25, 3: 0.45, 4: 0.7, 5: 0.9 };
-const HALF_LIFE_YEARS = 7; // old incidents decay but never vanish (floor below)
+export const HALF_LIFE_YEARS = 7; // old incidents decay but never vanish (floor below)
 const RECENCY_FLOOR = 0.35;
 
 const clamp = (x: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
@@ -271,7 +274,8 @@ export function calculateRiskScore(input: ScoreInput): ScoreResult {
   if (hasSevere) risk = Math.max(risk, 0.8 * peak);
 
   const r = Math.round(clamp(risk / 100) * 100);
-  const band = r < 25 ? "LOW" : r < 50 ? "ELEVATED" : r < 75 ? "HIGH" : "SEVERE";
+  const band =
+    r < BAND_THRESHOLDS.ELEVATED ? "LOW" : r < BAND_THRESHOLDS.HIGH ? "ELEVATED" : r < BAND_THRESHOLDS.SEVERE ? "HIGH" : "SEVERE";
   return {
     riskScore: r,
     authenticityScore: 100 - r,

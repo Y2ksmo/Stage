@@ -109,6 +109,19 @@ enum ReplyStatus {
   EXPIRED
 }
 
+/// Editorial review of a subject's reply before it is shown publicly.
+/// An editor's decision on an item whose reviewer votes conflict. CONFIRM replaces only the vote requirement.
+enum EditorResolution {
+  CONFIRM
+  REJECT
+}
+
+enum ReplyReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TakedownStatus {
   OPEN
   UNDER_REVIEW
@@ -136,6 +149,40 @@ model User {
   evidence         Evidence[]
   moderationLog    ModerationAction[]
   reports          AbuseReport[]
+  sessions         Session[]
+  loginTokens      LoginToken[]
+  repliesReviewed  RightOfReply[] @relation("ReplyReviewer")
+}
+
+/// One-time email login: a magic-link token and a 6-digit code, both bound to this row. Only keyed hashes are stored.
+model LoginToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  otpHash    String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  /// Wrong code guesses; the token is burned at the limit.
+  attempts   Int       @default(0)
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// Login sessions for API/staff access. Only the SHA-256 of the bearer token is stored.
+model Session {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /* ------------------------------ Leaders ------------------------------- */
@@ -214,6 +261,10 @@ model Claim {
   outcome       ClaimOutcome @default(PENDING)
   outcomeNote   String?
   outcomeDecidedAt DateTime?
+  editorResolution EditorResolution?
+  resolvedAt       DateTime?
+  resolvedById     String?
+  resolutionNote   String?
   state         PublishState @default(DRAFT)
   replyStatus   ReplyStatus  @default(NOT_OFFERED)
   replyDeadline DateTime?
@@ -259,6 +310,10 @@ model Incident {
   officialFinding Boolean        @default(false)
   /// Allegation vs established-fact wording is enforced in UI.
   isAllegationOnly Boolean       @default(true)
+  editorResolution EditorResolution?
+  resolvedAt       DateTime?
+  resolvedById     String?
+  resolutionNote   String?
   state         PublishState     @default(DRAFT)
   replyStatus   ReplyStatus      @default(NOT_OFFERED)
   replyDeadline DateTime?
@@ -372,6 +427,17 @@ model RightOfReply {
   responseText String?
   respondedAt DateTime?
   publishedWithItem Boolean @default(true)
+  /// SHA-256 of the one-time reply token sent to the subject (the token itself is never stored).
+  tokenHash   String?    @unique
+  recipientEmail String?
+  /// Links the subject attached to their response (displayed, never counted as verification evidence).
+  evidenceUrls String[]
+  /// null = nothing to review (declined / no reply yet). The reply is shown publicly only when APPROVED.
+  reviewStatus ReplyReviewStatus?
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewNotes  String?
+  reviewedBy   User?      @relation("ReplyReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   claim       Claim?     @relation(fields: [claimId], references: [id])
   incident    Incident?  @relation(fields: [incidentId], references: [id])
 }
@@ -383,12 +449,18 @@ model Takedown {
   targetId    String
   grounds     String
   requesterEmail String
+  requesterName  String?
+  /// Optional supporting links submitted by the requester (not scored, reviewed by LEGAL only).
+  evidenceUrls   String[]
   status      TakedownStatus @default(OPEN)
   /// Contested content is flagged DISPUTED (not deleted) pending LEGAL decision.
   decidedBy   String?
   decisionNote String?
   createdAt   DateTime       @default(now())
   leader      Leader?        @relation(fields: [leaderId], references: [id])
+
+  @@index([requesterEmail, createdAt])
+  @@index([targetType, targetId])
 }
 
 model AbuseReport {
