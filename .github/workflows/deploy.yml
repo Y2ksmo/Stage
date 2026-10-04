@@ -58,16 +58,6 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
 
-      # Temporary diagnostic for "Project not found" at deploy time. Prints only yes/no shape checks, never any part of a value.
-      - name: Check Vercel ID shape
-        run: |
-          [[ "$VERCEL_PROJECT_ID" == prj_* ]] && echo "project id starts with prj_: yes" || echo "project id starts with prj_: NO"
-          [[ "$VERCEL_ORG_ID" == team_* ]] && echo "org id starts with team_: yes" || echo "org id starts with team_: no (ok for a personal account)"
-          [[ "$VERCEL_PROJECT_ID" =~ ^[A-Za-z0-9_]+$ ]] && echo "project id has only expected characters: yes" || echo "project id has only expected characters: NO"
-          [[ "$VERCEL_ORG_ID" =~ ^[A-Za-z0-9_]+$ ]] && echo "org id has only expected characters: yes" || echo "org id has only expected characters: NO"
-          [ -f .vercel/project.json ] && echo ".vercel/project.json present: yes" || echo ".vercel/project.json present: NO"
-          node -e 'const p=require("./.vercel/project.json");console.log("project.json ids match secrets:",p.projectId===process.env.VERCEL_PROJECT_ID&&p.orgId===process.env.VERCEL_ORG_ID)'
-
       - name: Deploy
         id: deploy
         run: |
