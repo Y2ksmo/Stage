@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 
 const siteRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const projectName = "elvis-and-sons-site";
-const blockedDomains = new Set(["elvisandsonsservices.com", "www.elvisandsonsservices.com"]);
 
 const token = process.env.VERCEL_TOKEN ?? "";
 const secretOrgId = process.env.VERCEL_ORG_ID ?? "";
@@ -161,11 +160,6 @@ if (!domains.ok) {
   process.exit(1);
 }
 const attached = Array.isArray(domains.body?.domains) ? domains.body.domains : [];
-const live = attached.some((domain) => blockedDomains.has(String(domain?.name ?? "").toLowerCase()));
-if (live) {
-  console.error("elvisandsonsservices.com is already attached to this project. Refusing to deploy. DNS was not changed.");
-  process.exit(1);
-}
 
 console.error(
   `deploy owner shape: ${shape(accountId)}; owner matches secret org: ${accountId === secretOrgId ? "yes" : "no"}; dossier project: no`,
@@ -189,6 +183,72 @@ if (deploy.status !== 0) {
   console.error(output);
   console.error("Deploy failed. DNS was not changed.");
   process.exit(deploy.status ?? 1);
+}
+
+const publicDomains = [
+  { name: "elvisandsonsservices.com" },
+  { name: "www.elvisandsonsservices.com", redirect: "elvisandsonsservices.com", redirectStatusCode: 308 },
+];
+
+function domainNames(list) {
+  return new Set(list.map((domain) => String(domain?.name ?? "").toLowerCase()));
+}
+
+let knownDomains = domainNames(attached);
+
+for (const spec of publicDomains) {
+  if (knownDomains.has(spec.name)) {
+    console.error(`domain already on this project: ${spec.name}`);
+    continue;
+  }
+  let created = await vercel(`/v10/projects/${projectId}/domains`, { method: "POST", teamId, body: spec });
+  if (!created.ok && spec.redirect) {
+    created = await vercel(`/v10/projects/${projectId}/domains`, {
+      method: "POST",
+      teamId,
+      body: { name: spec.name },
+    });
+  }
+  if (created.ok) {
+    knownDomains.add(spec.name);
+    console.error(`attached domain: ${spec.name}`);
+    continue;
+  }
+  const code = String(created.body?.error?.code ?? "");
+  const owner = String(created.body?.error?.projectId ?? "");
+  if (owner && owner === projectId) {
+    knownDomains.add(spec.name);
+    console.error(`domain already on this project: ${spec.name}`);
+    continue;
+  }
+  if (dossierProjectId && owner === dossierProjectId) {
+    console.error("The public domain is attached to the dossier project. Refusing to move it. Namecheap was not modified.");
+    process.exit(1);
+  }
+  console.error(`Could not attach ${spec.name} (${created.status} ${code}). Namecheap was not modified.`);
+  process.exit(1);
+}
+
+const domainConfig = await vercel("/v6/domains/elvisandsonsservices.com/config", { teamId });
+const ipv4 = [];
+for (const item of domainConfig.body?.recommendedIPv4 ?? []) {
+  const values = Array.isArray(item?.value) ? item.value : [item?.value];
+  for (const value of values) if (value) ipv4.push(String(value));
+}
+const cnames = [];
+for (const item of domainConfig.body?.recommendedCNAME ?? []) {
+  if (item?.value) cnames.push(String(item.value));
+}
+const summary = [
+  "Public domain attached on the Elvis Vercel project only.",
+  "Namecheap was not modified.",
+  `Recommended A record for @: ${ipv4.join(", ") || "unavailable"}`,
+  `Recommended CNAME: ${cnames.join(", ") || "unavailable"}`,
+  "Leave MX and TXT records for privateemail.com unchanged.",
+].join("\n");
+console.error(summary);
+if (process.env.GITHUB_STEP_SUMMARY) {
+  writeFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`, { flag: "a" });
 }
 
 const urls = [...output.matchAll(/https:\/\/[^\s]+/g)].map((match) => match[0]);
