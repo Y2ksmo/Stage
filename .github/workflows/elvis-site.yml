@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: elvis-site-deploy
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
