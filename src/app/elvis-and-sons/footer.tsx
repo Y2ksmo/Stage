@@ -1,13 +1,6 @@
 import { BrandLink } from "./brand-link";
-import { contact, itLinks, movingLinks } from "./content";
-import { IconFacebook, IconInstagram, IconLinkedIn } from "./icons";
+import { contact, services } from "./content";
 import { Logo } from "./logo";
-
-const social = [
-  { label: "LinkedIn", icon: IconLinkedIn },
-  { label: "Facebook", icon: IconFacebook },
-  { label: "Instagram", icon: IconInstagram },
-];
 
 export function Footer() {
   return (
@@ -18,48 +11,37 @@ export function Footer() {
             <Logo onDark />
           </BrandLink>
           <p className="mt-5 max-w-xs text-sm leading-relaxed text-slate-300">
-            Elvis & Sons Multilink Ventures delivers IT infrastructure, web systems, and professional moving services from one accountable desk.
+            Moving, junk removal, deep cleaning, interior painting, and parking help for homes and businesses across Maryland, Virginia, and Washington, D.C.
           </p>
-          <ul className="mt-5 flex gap-2">
-            {social.map((item) => (
-              <li key={item.label}>
-                <a
-                  href="/elvis-and-sons#contact"
-                  aria-label={`${item.label} — contact Elvis & Sons`}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 text-white transition hover:border-white/40 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#93C5FD]"
-                >
-                  <item.icon className="h-4 w-4" />
-                </a>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-5 text-sm">
+            <a className="font-semibold text-white hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#93C5FD]" href={contact.phoneHref}>
+              Text or call {contact.phoneDisplay}
+            </a>
+          </p>
         </div>
 
-        <nav aria-label="Moving and logistics">
-          <h2 className="text-sm font-semibold text-white">Moving & Logistics</h2>
+        <nav aria-label="Services">
+          <h2 className="text-sm font-semibold text-white">Services</h2>
           <ul className="mt-4 space-y-2.5 text-sm">
-            {movingLinks.map((item) => (
-              <li key={item.label}>
-                <BrandLink href={item.href} tab={item.tab} category={item.category} className="transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#93C5FD]">
-                  {item.label}
+            {services.map((item) => (
+              <li key={item.id}>
+                <BrandLink href={`/elvis-and-sons#${item.id}`} className="transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#93C5FD]">
+                  {item.title}
                 </BrandLink>
               </li>
             ))}
           </ul>
         </nav>
 
-        <nav aria-label="IT and digital services">
-          <h2 className="text-sm font-semibold text-white">IT & Digital Services</h2>
+        <div>
+          <h2 className="text-sm font-semibold text-white">Service area</h2>
           <ul className="mt-4 space-y-2.5 text-sm">
-            {itLinks.map((item) => (
-              <li key={item.label}>
-                <BrandLink href={item.href} tab={item.tab} category={item.category} className="transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#93C5FD]">
-                  {item.label}
-                </BrandLink>
-              </li>
+            {contact.areas.map((area) => (
+              <li key={area}>{area}</li>
             ))}
           </ul>
-        </nav>
+          <p className="mt-4 text-sm text-slate-400">{contact.domain}</p>
+        </div>
 
         <div>
           <h2 className="text-sm font-semibold text-white">Contact</h2>
@@ -74,12 +56,7 @@ export function Footer() {
                 {contact.email}
               </a>
             </p>
-            <p className="text-slate-400">{contact.domain}</p>
-            <ul className="space-y-1.5 pt-1 text-slate-300">
-              {contact.hours.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
+            <p>Text or call for immediate assistance.</p>
           </address>
         </div>
       </div>

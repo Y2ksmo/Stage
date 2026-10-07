@@ -28,7 +28,7 @@ export function Header() {
 
   useEffect(() => {
     if (!home) return;
-    const ids = ["top", "services", "about", "quote", "contact"];
+    const ids = ["top", "services", "about", "reviews", "quote", "contact"];
     const nodes = ids.map((id) => document.getElementById(id)).filter((node): node is HTMLElement => Boolean(node));
     const observer = new IntersectionObserver(
       (entries) => {
@@ -68,13 +68,11 @@ export function Header() {
 
         <nav aria-label="Primary" className="ml-auto hidden items-center gap-5 lg:flex">
           {nav.map((item) => {
-            const active = home && current === item.section && item.label !== "IT Solutions";
+            const active = home && current === item.section;
             return (
               <BrandLink
                 key={item.label}
                 href={item.href}
-                tab={item.tab}
-                category={item.category}
                 className={`relative py-1 text-sm font-medium transition hover:text-[#2563EB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2563EB] ${active ? (onDark ? "text-white" : "text-[#0F172A]") : onDark ? "text-white/80" : "text-slate-600"}`}
               >
                 {item.label}
@@ -85,7 +83,7 @@ export function Header() {
         </nav>
 
         <BrandLink href="/elvis-and-sons#quote" className="ml-2 hidden min-h-11 items-center justify-center rounded-lg bg-[#D97706] px-4 text-sm font-semibold text-[#0F172A] shadow-sm transition hover:bg-[#B45309] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FBBF24] lg:inline-flex">
-          Get a Free Quote
+          Get a Quote
         </BrandLink>
 
         <div className="ml-auto flex items-center gap-2 lg:hidden">
@@ -112,8 +110,6 @@ export function Header() {
               <BrandLink
                 key={item.label}
                 href={item.href}
-                tab={item.tab}
-                category={item.category}
                 onNavigate={() => setOpen(false)}
                 className="border-b border-slate-100 py-3 text-base font-medium text-[#0F172A] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
               >
@@ -121,7 +117,7 @@ export function Header() {
               </BrandLink>
             ))}
             <BrandLink href="/elvis-and-sons#quote" className={`${btnAccent} mt-4 w-full`} onNavigate={() => setOpen(false)}>
-              Get a Free Quote
+              Get a Quote
             </BrandLink>
           </nav>
         </div>

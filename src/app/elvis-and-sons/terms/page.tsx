@@ -12,26 +12,26 @@ export default function TermsPage() {
     <main className="mx-auto w-full max-w-3xl px-5 pb-24 pt-32 sm:px-6">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">Elvis & Sons</p>
       <h1 className="mt-3 text-4xl font-semibold tracking-[-0.03em] text-[#0F172A]">Terms of Service</h1>
-      <p className="mt-4 text-[#334155]">Effective October 7, 2026. These terms cover use of {contact.domain} and requests sent through it.</p>
+      <p className="mt-4 text-[#334155]">Effective October 7, 2026. These terms cover use of {contact.domain} and requests for moving, junk removal, cleaning, painting, and parking help.</p>
 
       <h2 className="mt-10 text-xl font-semibold text-[#0F172A]">Quotes are estimates until confirmed</h2>
       <p className="mt-3 leading-relaxed text-[#1E293B]">
-        A form submission or phone call is a request for an estimate. It is not a booking. Work begins only after Elvis & Sons confirms the scope, price, and schedule in writing or by a clear email acceptance. Dates discussed on the site are not reserved until that confirmation.
+        A form submission or phone call is a request for a price. It is not a booking. Work begins after Elvis & Sons confirms the scope, price, and schedule. Dates discussed on the site are not reserved until that confirmation.
       </p>
 
       <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">Services</h2>
       <p className="mt-3 leading-relaxed text-[#1E293B]">
-        IT, web, hosting, DNS, automation, and support work is delivered as described in the accepted estimate. Moving, packing, and freight work is performed by licensed and insured crews within the access conditions you provide, including building rules, elevators, and parking. If the site conditions differ from what was described, the estimate may be revised before the crew proceeds.
+        Moving, hauling, debris and junk removal, deep cleaning, interior painting, and parking or unparking are performed as described in the accepted estimate. Crews are licensed and insured. Access conditions you provide — stairs, elevators, parking, and building rules — are part of the price. If the property differs from what was described, the estimate may be revised before the crew proceeds.
+      </p>
+
+      <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">Service area</h2>
+      <p className="mt-3 leading-relaxed text-[#1E293B]">
+        Service is offered in Maryland, Virginia, and Washington, D.C. Availability, including same-day visits, depends on the schedule and the location.
       </p>
 
       <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">Acceptable use</h2>
       <p className="mt-3 leading-relaxed text-[#1E293B]">
-        Do not misuse the form, attempt to disrupt the site, or submit information you do not have the right to share. Site copy, the logo, and page design belong to Elvis & Sons Multilink Ventures and may not be copied for another business.
-      </p>
-
-      <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">Liability</h2>
-      <p className="mt-3 leading-relaxed text-[#1E293B]">
-        Information on this website is a general description of services. It is not a warranty of a particular outcome. Responsibility for a project is defined in the estimate you accept, not by these website terms alone.
+        Do not misuse the form or submit information you do not have the right to share. Site copy, the logo, and page design belong to Elvis & Sons Multilink Ventures.
       </p>
 
       <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">Contact</h2>

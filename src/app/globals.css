@@ -29,7 +29,7 @@ body:not(:has(.elvis-root)) button:disabled { opacity:.6; cursor:not-allowed; }
 .badges { display:flex; flex-wrap:wrap; gap:.4rem; }
 .badge { border:1px solid var(--line); border-radius:.3rem; padding:.05rem .45rem; font-size:.75rem; font-weight:600; }
 .badge-claim { border-color:#93c5fd; } .badge-incident { border-color:#c4b5fd; } .badge-disputed { border-color:#fbbf24; }
-blockquote { margin:.75rem 0; padding:.1rem 0 .1rem .9rem; border-left:3px solid var(--line); white-space:pre-wrap; }
+body:not(:has(.elvis-root)) blockquote { margin:.75rem 0; padding:.1rem 0 .1rem .9rem; border-left:3px solid var(--line); white-space:pre-wrap; }
 .notice-note { color:var(--muted); font-style:italic; }
 .evidence summary { cursor:pointer; font-size:.9rem; }
 .reply { margin-top:.75rem; font-size:.9rem; }

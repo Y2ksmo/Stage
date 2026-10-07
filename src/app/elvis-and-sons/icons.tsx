@@ -164,6 +164,34 @@ export function IconArrow({ className }: IconProps) {
   );
 }
 
+export function IconBrush({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={base(className)} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 4.5 19.5 9.5 9 20H4v-5L14.5 4.5Z" />
+      <path strokeLinecap="round" d="M13 6.5 17.5 11" />
+    </svg>
+  );
+}
+
+export function IconCar({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={base(className)} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+      <path strokeLinejoin="round" d="M4 15.5 5.5 10a2 2 0 0 1 1.9-1.4h9.2A2 2 0 0 1 18.5 10L20 15.5" />
+      <path strokeLinejoin="round" d="M3.5 15.5h17V18a1 1 0 0 1-1 1h-1.2a1 1 0 0 1-1-1v-.5H6.7V18a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1v-2.5Z" />
+      <path strokeLinecap="round" d="M7 12.5h10" />
+    </svg>
+  );
+}
+
+export function IconPin({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={base(className)} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+      <path strokeLinejoin="round" d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" />
+      <circle cx="12" cy="11" r="2.2" />
+    </svg>
+  );
+}
+
 export function IconMail({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={base(className)} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">

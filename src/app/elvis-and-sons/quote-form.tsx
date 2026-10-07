@@ -43,12 +43,14 @@ function QuoteFields({ initialCategory, onReset }: { initialCategory: string; on
     if (first) document.getElementById(first)?.focus();
   }, [state]);
 
-  const placeholder =
-    category === "Moving & Relocation Quote"
-      ? "Origin and destination, move date, home or office size, stairs or elevator, and items that need special care."
-      : category === "IT & Web Development Consultation"
-        ? "The site, network, or workflow you need, plus your timeline and the systems already in place."
-        : "What you need help with, the timeline, and any locations involved.";
+  const placeholders: Record<string, string> = {
+    "Moving & Hauling": "Pickup and drop-off addresses, move date, stairs or elevator, and what needs to be moved.",
+    "Debris & Junk Removal": "What needs to go, where it is, and the city in Maryland, Virginia, or D.C.",
+    "Deep Cleaning": "Property address, move-in or move-out, and the size of the home or office.",
+    "Interior Painting": "Rooms to paint, the property address, and when you need it finished.",
+    "Parking & Unparking": "Property or event location, date, and how many vehicles.",
+  };
+  const placeholder = placeholders[category] ?? "The address, the date, and what you need moved, hauled, cleaned, or painted.";
 
   if (state.ok && state.submission) {
     const submission = state.submission;
@@ -165,16 +167,16 @@ export function QuoteSection({ initialCategory }: { initialCategory: string }) {
         <div className="lg:col-span-5">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">Quote & inquiry</p>
           <h2 id="contact-heading" className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#0F172A] sm:text-4xl">
-            Tell us the move, the system, or the support you need
+            Tell us the job and where it is
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-[#334155]">
-            Share the scope. We reply with a clear estimate — no bundled surprises, and no work scheduled until you approve it.
+            Text or call {contact.phoneDisplay} for immediate assistance, or send the details for an upfront price.
           </p>
           <ol className="mt-8 space-y-4">
             {[
-              ["01", "Share the scope", "Locations, dates, and what has to move or be built."],
-              ["02", "Receive a clear estimate", "A written number tied to the work described."],
-              ["03", "Schedule the work", "Crews or specialists are booked only after you confirm."],
+              ["01", "Share the job", "Address, date, and what needs to be moved, hauled, cleaned, or painted."],
+              ["02", "Get an upfront price", "A clear number before the crew starts. No surprises at checkout."],
+              ["03", "Schedule the crew", "Work is booked after you approve the estimate."],
             ].map(([step, title, body]) => (
               <li key={step} className="flex gap-4">
                 <span className="text-sm font-semibold tracking-[0.14em] text-[#B45309]">{step}</span>
@@ -187,7 +189,7 @@ export function QuoteSection({ initialCategory }: { initialCategory: string }) {
           </ol>
 
           <div className="mt-8 rounded-2xl border border-slate-200 bg-[#F8FAFC] p-5">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#B45309]">Direct desk</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-[#B45309]">Call or text</h3>
             <ul className="mt-4 space-y-3 text-sm">
               <li>
                 <a className="inline-flex items-center gap-2 font-semibold text-[#0F172A] hover:text-[#1D4ED8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2563EB]" href={contact.phoneHref}>
@@ -203,10 +205,11 @@ export function QuoteSection({ initialCategory }: { initialCategory: string }) {
               </li>
             </ul>
             <ul className="mt-4 space-y-1 text-sm text-[#475569]">
-              {contact.hours.map((line) => (
-                <li key={line}>{line}</li>
+              {contact.areas.map((area) => (
+                <li key={area}>{area}</li>
               ))}
             </ul>
+            <p className="mt-3 text-sm text-[#475569]">Text or call for immediate assistance.</p>
           </div>
         </div>
 

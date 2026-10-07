@@ -16,17 +16,17 @@ export default function PrivacyPage() {
 
       <h2 className="mt-10 text-xl font-semibold text-[#0F172A]">Information you submit</h2>
       <p className="mt-3 leading-relaxed text-[#1E293B]">
-        The quote form asks for your name, email address, phone number, service category, and project details or locations. That information is used to review the request and reply to you. Do not include payment card numbers, government identification numbers, or passwords in the project details.
+        The quote form asks for your name, email address, phone number, service, and project details or locations. That information is used to review a moving, junk removal, cleaning, painting, or parking request and reply to you. Do not include payment card numbers or government identification numbers in the project details.
       </p>
 
       <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">How a request is handled</h2>
       <p className="mt-3 leading-relaxed text-[#1E293B]">
-        Submitting the form checks the fields and confirms the request on this page. You can then email the same details to {contact.email} or call {contact.phoneDisplay}. We do not sell personal information, and this marketing page does not run advertising or analytics cookies.
+        Submitting the form checks the fields and confirms the request on this page. For immediate assistance, text or call {contact.phoneDisplay}, or email {contact.email}. We do not sell personal information, and this page does not run advertising or analytics cookies.
       </p>
 
       <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">How long it is kept</h2>
       <p className="mt-3 leading-relaxed text-[#1E293B]">
-        Email you send to the desk is kept for as long as needed to estimate, schedule, and complete the work, and to meet ordinary business record needs. You may ask us to correct or delete inquiry details by writing to {contact.email}.
+        Messages you send to the desk are kept for as long as needed to estimate, schedule, and complete the job, and for ordinary business records. You may ask us to correct or delete inquiry details by writing to {contact.email}.
       </p>
 
       <h2 className="mt-8 text-xl font-semibold text-[#0F172A]">Contact</h2>

@@ -1,25 +1,22 @@
 export const container = "mx-auto w-full max-w-[1120px] px-5 sm:px-6 lg:px-8";
 
 export const contact = {
-  email: "hello@elvisandsonsservices.com",
-  phoneDisplay: "(800) 555-0148",
-  phoneHref: "tel:+18005550148",
+  email: "info@elvisandsonsservices.com",
+  phoneDisplay: "(443) 380-9960",
+  phoneHref: "tel:+14433809960",
   domain: "elvisandsonsservices.com",
-  hours: [
-    "Office: Monday–Friday, 8:00 a.m.–6:00 p.m.",
-    "Moving dispatch: Monday–Saturday, 7:00 a.m.–7:00 p.m.",
-    "Technical support: 24/7",
-  ],
+  areas: ["Maryland (MD)", "Virginia (VA)", "Washington, D.C."],
 };
 
 export const quoteCategories = [
-  { key: "moving", label: "Moving & Relocation Quote" },
-  { key: "it", label: "IT & Web Development Consultation" },
-  { key: "general", label: "General Business Support" },
+  { key: "moving", label: "Moving & Hauling" },
+  { key: "junk", label: "Debris & Junk Removal" },
+  { key: "cleaning", label: "Deep Cleaning" },
+  { key: "painting", label: "Interior Painting" },
+  { key: "parking", label: "Parking & Unparking" },
 ] as const;
 
 export type QuoteKey = (typeof quoteCategories)[number]["key"];
-export type ServiceTab = "it" | "moving";
 
 export function quoteLabel(key: string | undefined): string {
   return quoteCategories.find((item) => item.key === key)?.label ?? "";
@@ -28,8 +25,8 @@ export function quoteLabel(key: string | undefined): string {
 export const nav = [
   { href: "/elvis-and-sons#top", label: "Home", section: "top" },
   { href: "/elvis-and-sons#services", label: "Services", section: "services" },
-  { href: "/elvis-and-sons?category=moving#quote", label: "Moving Quote", section: "quote", category: "moving" as const },
-  { href: "/elvis-and-sons?tab=it#services", label: "IT Solutions", section: "services", tab: "it" as const },
+  { href: "/elvis-and-sons#quote", label: "Quote", section: "quote" },
+  { href: "/elvis-and-sons#reviews", label: "Reviews", section: "reviews" },
   { href: "/elvis-and-sons#about", label: "About Us", section: "about" },
   { href: "/elvis-and-sons#contact", label: "Contact", section: "contact" },
 ];
@@ -46,114 +43,89 @@ export const btnGhostOnDark =
 export const btnSecondary =
   "inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-[#0F172A] transition hover:border-[#2563EB] hover:text-[#1D4ED8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]";
 
-export const serviceLines = {
-  it: {
-    label: "IT & Digital Solutions",
-    summary: "Websites, hosting, DNS, and the technical support that keeps a business reachable.",
-    items: [
-      {
-        id: "web",
-        title: "Custom Web Design & Hosting Architecture",
-        body: "Sites and hosting planned for clarity, speed, and a clean handoff. Domain, staging, and launch stay with one accountable team.",
-        quote: "it" as const,
-      },
-      {
-        id: "network",
-        title: "Network Infrastructure & DNS Configuration",
-        body: "Network setup and DNS management so email, websites, and internal tools resolve correctly and stay reachable.",
-        quote: "it" as const,
-      },
-      {
-        id: "automation",
-        title: "Enterprise Business Automation & Digital Support",
-        body: "Practical automation and day-to-day technical support that removes repetitive work without disrupting how your team already operates.",
-        quote: "it" as const,
-      },
-    ],
+export const services = [
+  {
+    id: "moving",
+    title: "Moving & Hauling",
+    body: "Residential and commercial furniture loading, unloading, and regional transport.",
+    quote: "moving" as const,
   },
-  moving: {
-    label: "Moving & Logistics Services",
-    summary: "Residential moves, office relocations, and freight handled against a written plan.",
-    items: [
-      {
-        id: "residential",
-        title: "Residential & Apartment Moving",
-        body: "Home and apartment relocations, from a single room to a full household, with care for furniture, access rules, and building schedules.",
-        quote: "moving" as const,
-      },
-      {
-        id: "commercial",
-        title: "Office & Commercial Relocation",
-        body: "Business moves planned around your operation so equipment is protected and downtime stays inside the window you can absorb.",
-        quote: "moving" as const,
-      },
-      {
-        id: "freight",
-        title: "Packing, Transport & Freight Handling",
-        body: "Packing, loading, and freight coordination for local and longer-haul work, carried by licensed and insured crews.",
-        quote: "moving" as const,
-      },
-    ],
+  {
+    id: "junk",
+    title: "Debris & Junk Removal",
+    body: "Basement, garage, and post-construction waste disposed of quickly and responsibly.",
+    quote: "junk" as const,
   },
-} as const;
+  {
+    id: "cleaning",
+    title: "Deep Cleaning",
+    body: "Move-in and move-out scrubbing and property preparation.",
+    quote: "cleaning" as const,
+  },
+  {
+    id: "painting",
+    title: "Interior Painting",
+    body: "Quality surface prep and interior painting for homes and offices.",
+    quote: "painting" as const,
+  },
+  {
+    id: "parking",
+    title: "Parking & Unparking",
+    body: "Vehicle parking and unparking assistance for residential, commercial, and event needs.",
+    quote: "parking" as const,
+  },
+];
 
-export const cardTab: Record<string, ServiceTab> = {
-  web: "it",
-  network: "it",
-  automation: "it",
-  residential: "moving",
-  commercial: "moving",
-  freight: "moving",
-};
+export const portfolio = [
+  { title: "Debris & Clearing", body: "Post-construction waste, garage cleanouts, and haul-away." },
+  { title: "Household & Fixtures", body: "Furniture moves, household cleanouts, and property turnover." },
+  { title: "Commercial Fleet", body: "Office moves, commercial cleanouts, and scheduled property work." },
+];
 
 export const reasons = [
   {
-    title: "Verified Expertise",
-    body: "Certified IT specialists and experienced logistics teams.",
-    detail: "Digital work and physical moves are staffed by people who do that work every week.",
+    title: "Fast Response",
+    body: "Same-day service when you need it.",
+    detail: "Fast response times and reliable crews across the DMV.",
   },
   {
-    title: "Transparent Pricing",
-    body: "Clear estimates with zero hidden costs or surprise fees.",
-    detail: "You see the scope and the number before anyone is scheduled.",
+    title: "Licensed & Insured",
+    body: "Professional crews you can trust.",
+    detail: "Fully licensed and insured for your peace of mind.",
   },
   {
-    title: "Tailored Execution",
-    body: "Solutions customized to your exact timeline and budget.",
-    detail: "The plan follows your date, access constraints, and the systems you already run.",
+    title: "Upfront Pricing",
+    body: "No surprises at checkout.",
+    detail: "Transparent pricing before the work begins.",
   },
   {
-    title: "Dedicated Support",
-    body: "Fast response times for urgent moves or technical needs.",
-    detail: "A person answers when a move window slips or a system goes down.",
+    title: "Careful Handling",
+    body: "Friendly service on every job.",
+    detail: "Careful handling from the first call through the finished space.",
   },
 ];
 
 export const metrics = [
-  {
-    title: "100% Satisfaction Rate",
-    body: "The engagement is complete when the agreed outcome is delivered.",
-  },
-  {
-    title: "Licensed & Insured Logistics",
-    body: "Residential, commercial, and freight work handled by covered crews.",
-  },
-  {
-    title: "24/7 Technical Support",
-    body: "Urgent infrastructure issues reach a person, day or night.",
-  },
+  { title: "Same-Day Service", body: "Fast response when you need it." },
+  { title: "Licensed & Insured", body: "Professional crews you can trust." },
+  { title: "Upfront Pricing", body: "No surprises at checkout." },
+  { title: "MD • VA • DC", body: "Coverage across the DMV." },
 ];
 
-export const movingLinks = [
-  { href: "/elvis-and-sons?tab=moving#residential", label: "Residential & Apartment Moving", tab: "moving" as const },
-  { href: "/elvis-and-sons?tab=moving#commercial", label: "Office & Commercial Relocation", tab: "moving" as const },
-  { href: "/elvis-and-sons?tab=moving#freight", label: "Packing, Transport & Freight", tab: "moving" as const },
-  { href: "/elvis-and-sons?category=moving#quote", label: "Request a Moving Quote", category: "moving" as const },
-];
-
-export const itLinks = [
-  { href: "/elvis-and-sons?tab=it#web", label: "Web Design & Hosting", tab: "it" as const },
-  { href: "/elvis-and-sons?tab=it#network", label: "Network & DNS Configuration", tab: "it" as const },
-  { href: "/elvis-and-sons?tab=it#automation", label: "Business Automation & Support", tab: "it" as const },
-  { href: "/elvis-and-sons?category=it#quote", label: "Book an IT Consultation", category: "it" as const },
+export const reviews = [
+  {
+    title: "Excellent moving crew!",
+    quote: "They arrived on time, protected our furniture, and made the entire move stress-free.",
+    place: "Silver Spring, MD",
+  },
+  {
+    title: "Junk removal was fast.",
+    quote: "Same-day pickup, a fair price, and a clean space when the job was finished.",
+    place: "Alexandria, VA",
+  },
+  {
+    title: "Spotless deep clean.",
+    quote: "Our rental looked brand new and ready for the next tenant.",
+    place: "Washington, DC",
+  },
 ];

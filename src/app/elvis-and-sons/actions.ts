@@ -1,6 +1,6 @@
 "use server";
 
-import { quoteCategories } from "./content";
+import { contact, quoteCategories } from "./content";
 import { initialQuoteState, type QuoteState } from "./quote-state";
 
 function clean(value: FormDataEntryValue | null, max: number) {
@@ -9,7 +9,7 @@ function clean(value: FormDataEntryValue | null, max: number) {
 
 export async function submitQuote(_prev: QuoteState, formData: FormData): Promise<QuoteState> {
   if (clean(formData.get("fax"), 80)) {
-    return { ...initialQuoteState, message: "We could not send that request. Email hello@elvisandsonsservices.com instead." };
+    return { ...initialQuoteState, message: `We could not send that request. Email ${contact.email} instead.` };
   }
 
   const name = clean(formData.get("name"), 80);
@@ -37,7 +37,7 @@ export async function submitQuote(_prev: QuoteState, formData: FormData): Promis
 
   return {
     ok: true,
-    message: `Thank you, ${name}. Your ${category} is confirmed. Email the desk or call during operating hours and we will take it from here.`,
+    message: `Thank you, ${name}. Your ${category} request is confirmed. Call or text (443) 380-9960, or email ${contact.email}, and we will take it from here.`,
     errors: {},
     submission: { name, email, phone, category, details },
   };

@@ -1,8 +1,8 @@
 import { BrandLink } from "./brand-link";
-import { btnGhostOnDark, btnPrimary, container, metrics } from "./content";
-import { IconBadge, IconHeadset, IconMonitor, IconShield, IconTruck } from "./icons";
+import { btnGhostOnDark, btnPrimary, contact, container, metrics } from "./content";
+import { IconBadge, IconClock, IconPin, IconReceipt, IconTruck } from "./icons";
 
-const metricIcons = [IconShield, IconBadge, IconHeadset];
+const metricIcons = [IconClock, IconBadge, IconReceipt, IconPin];
 
 export function Hero() {
   return (
@@ -17,55 +17,44 @@ export function Hero() {
             <span className="h-px w-8 bg-[#D97706]" aria-hidden="true" />
             Elvis & Sons Multilink Ventures
           </p>
-          <h1 className="mt-5 max-w-3xl text-[2.15rem] font-semibold leading-[1.12] tracking-[-0.03em] text-white sm:text-5xl lg:text-[3.25rem] lg:leading-[1.08]">
-            Reliable IT Infrastructure & Professional Moving Services Built for Success
+          <h1 className="mt-5 max-w-3xl text-[2.05rem] font-semibold leading-[1.12] tracking-[-0.03em] text-white sm:text-4xl lg:text-5xl lg:leading-[1.1]">
+            Property Cleaning, Moving & Junk Removal, Parking & Unparking Services
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#E2E8F0]">
-            From seamless enterprise IT solutions and web infrastructure to stress-free residential and commercial relocations, Elvis & Sons delivers excellence across every project.
+            Professional residential and commercial moves, estate cleanouts, deep cleaning, and interior painting across the DMV area.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <BrandLink href="/elvis-and-sons?category=moving#quote" category="moving" className={btnPrimary}>
-              Request a Moving Quote
+            <BrandLink href="/elvis-and-sons#quote" className={btnPrimary}>
+              Request a Quote
             </BrandLink>
-            <BrandLink href="/elvis-and-sons?tab=it#services" tab="it" className={btnGhostOnDark}>
-              Explore IT & Web Services
-            </BrandLink>
+            <a href={contact.phoneHref} className={btnGhostOnDark}>
+              Call {contact.phoneDisplay}
+            </a>
           </div>
         </div>
 
         <div className="lg:col-span-5">
           <div className="rounded-3xl border border-white/15 bg-white/5 p-3 shadow-[0_30px_80px_-36px_rgba(0,0,0,0.7)] backdrop-blur-sm sm:p-4">
             <div className="flex items-center justify-between px-2 pb-3 pt-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/75">Two practices, one desk</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/75">MD · VA · DC</p>
               <p className="inline-flex items-center gap-2 text-xs font-medium text-[#BBF7D0]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#4ADE80]" aria-hidden="true" />
-                Accepting work
+                Same-day service
               </p>
             </div>
             <article className="rounded-2xl bg-white p-5 text-[#0F172A] shadow-lg">
               <div className="flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EFF6FF] text-[#1D4ED8]">
-                  <IconMonitor className="h-5 w-5" />
-                </span>
-                <h2 className="text-base font-semibold">IT & Digital Infrastructure</h2>
-              </div>
-              <ul className="mt-4 space-y-2 text-sm text-[#334155]">
-                <li>Custom web design and hosting architecture</li>
-                <li>Network infrastructure and DNS configuration</li>
-                <li>Automation and digital support</li>
-              </ul>
-            </article>
-            <article className="mt-3 rounded-2xl border border-white/10 bg-[#0B1222] p-5">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#D97706]/15 text-[#FBBF24]">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFFBEB] text-[#B45309]">
                   <IconTruck className="h-5 w-5" />
                 </span>
-                <h2 className="text-base font-semibold text-white">Moving & Logistics</h2>
+                <h2 className="text-base font-semibold">Services we offer</h2>
               </div>
-              <ul className="mt-4 space-y-2 text-sm text-[#E2E8F0]">
-                <li>Residential and apartment moving</li>
-                <li>Office and commercial relocation</li>
-                <li>Packing, transport, and freight handling</li>
+              <ul className="mt-4 space-y-2 text-sm text-[#334155]">
+                <li>Moving and hauling</li>
+                <li>Debris and junk removal</li>
+                <li>Deep cleaning</li>
+                <li>Interior painting</li>
+                <li>Parking and unparking</li>
               </ul>
             </article>
           </div>
@@ -78,11 +67,11 @@ export function Hero() {
 export function Metrics() {
   return (
     <section aria-label="Service standards" className={`${container} relative z-10 -mt-16`}>
-      <ul className="grid overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_24px_50px_-28px_rgba(15,23,42,0.45)] md:grid-cols-3 md:divide-x md:divide-slate-200">
+      <ul className="grid gap-px overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-200 shadow-[0_24px_50px_-28px_rgba(15,23,42,0.45)] sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((item, index) => {
-          const Icon = metricIcons[index] ?? IconShield;
+          const Icon = metricIcons[index] ?? IconBadge;
           return (
-            <li key={item.title} className="flex gap-4 border-b border-slate-200 p-5 last:border-b-0 md:border-b-0 sm:p-6">
+            <li key={item.title} className="flex gap-4 bg-white p-5 sm:p-6">
               <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FFFBEB] text-[#B45309]">
                 <Icon className="h-5 w-5" />
               </span>

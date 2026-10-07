@@ -13,7 +13,7 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: { absolute: "Elvis & Sons Multilink Ventures" },
   description:
-    "From seamless enterprise IT solutions and web infrastructure to stress-free residential and commercial relocations, Elvis & Sons delivers excellence across every project.",
+    "Professional residential and commercial moves, estate cleanouts, deep cleaning, and interior painting across Maryland, Virginia, and Washington, D.C.",
 };
 
 export default function ElvisLayout({ children }: { children: React.ReactNode }) {
