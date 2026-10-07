@@ -8,68 +8,154 @@ const projectName = "elvis-and-sons-site";
 const blockedDomains = new Set(["elvisandsonsservices.com", "www.elvisandsonsservices.com"]);
 
 const token = process.env.VERCEL_TOKEN ?? "";
-const orgId = process.env.VERCEL_ORG_ID ?? "";
+const secretOrgId = process.env.VERCEL_ORG_ID ?? "";
 const dossierProjectId = process.env.DOSSIER_PROJECT_ID ?? "";
 const presetProjectId = process.env.VERCEL_ELVIS_PROJECT_ID ?? "";
 
-if (!token || !orgId) {
+if (!token || !secretOrgId) {
   console.error("VERCEL_TOKEN and VERCEL_ORG_ID are required. DNS was not changed.");
   process.exit(1);
 }
 
-const teamQuery = orgId.startsWith("team_") ? `teamId=${encodeURIComponent(orgId)}` : "";
+function redact(text) {
+  let safe = String(text ?? "");
+  for (const secret of [token, secretOrgId, dossierProjectId]) {
+    if (secret) safe = safe.split(secret).join("[redacted]");
+  }
+  return safe;
+}
 
-async function vercel(path, init = {}) {
+async function vercel(path, { method = "GET", body, teamId } = {}) {
   const url = new URL(`https://api.vercel.com${path}`);
-  if (teamQuery) url.search = teamQuery;
+  if (teamId) url.searchParams.set("teamId", teamId);
   const response = await fetch(url, {
-    ...init,
+    method,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      ...(init.headers ?? {}),
     },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const body = await response.json().catch(() => ({}));
-  return { ok: response.ok, status: response.status, body };
+  const payload = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, body: payload };
 }
 
-function projectIdOf(body) {
-  return typeof body?.id === "string" ? body.id : "";
+function shape(id) {
+  if (!id) return "missing";
+  if (id.startsWith("team_")) return "team";
+  if (id.startsWith("prj_")) return "project";
+  return "other";
 }
 
-let projectId = presetProjectId;
-if (!projectId) {
-  const existing = await vercel(`/v9/projects/${encodeURIComponent(projectName)}`);
-  if (existing.ok) {
-    projectId = projectIdOf(existing.body);
-  } else if (existing.status === 404 || existing.body?.error?.code === "not_found") {
-    const created = await vercel("/v11/projects", {
-      method: "POST",
-      body: JSON.stringify({ name: projectName, framework: "nextjs" }),
-    });
-    if (!created.ok) {
-      console.error(`Could not create the standalone Vercel project (${created.status}). DNS was not changed.`);
-      process.exit(1);
+const userResponse = await vercel("/v2/user");
+const userId = userResponse.body?.user?.id ?? "";
+const teamsResponse = userResponse.ok ? await vercel("/v2/teams") : { ok: false, status: 0, body: {} };
+const fallbackTeams = teamsResponse.ok ? teamsResponse : await vercel("/v1/teams");
+const teams = (Array.isArray(fallbackTeams.body?.teams) ? fallbackTeams.body.teams : [])
+  .map((team) => ({ id: String(team?.id ?? ""), slug: String(team?.slug ?? "") }))
+  .filter((team) => team.id.startsWith("team_"));
+
+console.error(
+  `token user: ${userResponse.ok ? "yes" : "no"} (${userResponse.status}); secret org shape: ${shape(secretOrgId)}; secret org is token user: ${Boolean(userId) && secretOrgId === userId ? "yes" : "no"}; teams visible: ${teams.length}`,
+);
+
+async function cliCanResolve(orgId) {
+  if (!orgId) return false;
+  if (orgId.startsWith("team_")) {
+    if (teams.some((team) => team.id === orgId)) return true;
+    const team = await vercel(`/teams/${encodeURIComponent(orgId)}`);
+    return team.ok && team.body?.id === orgId;
+  }
+  return Boolean(userId) && orgId === userId;
+}
+
+const searchScopes = [];
+function addScope(teamId) {
+  const key = teamId ?? "";
+  if (searchScopes.some((scope) => scope.teamId === key)) return;
+  searchScopes.push({ teamId: key });
+}
+addScope("");
+if (userId) addScope(userId.startsWith("team_") ? userId : "");
+for (const team of teams) addScope(team.id);
+if (secretOrgId.startsWith("team_")) addScope(secretOrgId);
+
+async function findByName(teamId) {
+  const found = await vercel(`/v9/projects/${encodeURIComponent(projectName)}`, { teamId: teamId || undefined });
+  if (!found.ok || found.body?.name !== projectName || !String(found.body?.id ?? "").startsWith("prj_")) return null;
+  return found.body;
+}
+
+let project = null;
+if (presetProjectId) {
+  for (const scope of searchScopes) {
+    const found = await vercel(`/v9/projects/${encodeURIComponent(presetProjectId)}`, { teamId: scope.teamId || undefined });
+    if (found.ok && found.body?.id === presetProjectId) {
+      project = found.body;
+      break;
     }
-    projectId = projectIdOf(created.body);
-  } else {
-    console.error(`Could not look up the standalone Vercel project (${existing.status}). DNS was not changed.`);
+  }
+  if (!project) {
+    console.error("VERCEL_ELVIS_PROJECT_ID is not visible to this token. DNS was not changed.");
     process.exit(1);
+  }
+} else {
+  for (const scope of searchScopes) {
+    project = await findByName(scope.teamId);
+    if (project) break;
   }
 }
 
-if (!projectId || !projectId.startsWith("prj_")) {
-  console.error("Standalone project id is missing. DNS was not changed.");
-  process.exit(1);
+const preferredTeamId = secretOrgId.startsWith("team_") && (await cliCanResolve(secretOrgId)) ? secretOrgId : undefined;
+
+if (!project) {
+  let created = await vercel("/v11/projects", {
+    method: "POST",
+    teamId: preferredTeamId,
+    body: { name: projectName, framework: "nextjs" },
+  });
+  if (!created.ok && !preferredTeamId && teams[0]?.id) {
+    created = await vercel("/v11/projects", {
+      method: "POST",
+      teamId: teams[0].id,
+      body: { name: projectName, framework: "nextjs" },
+    });
+  }
+  if (!created.ok || created.body?.name !== projectName) {
+    console.error(`Could not create the standalone Vercel project (${created.status}). DNS was not changed.`);
+    process.exit(1);
+  }
+  project = created.body;
+  console.error("created standalone project: yes");
+} else {
+  console.error("found existing standalone project: yes");
 }
 
+const projectId = String(project.id ?? "");
+const accountId = String(project.accountId ?? preferredTeamId ?? userId ?? "");
+if (!projectId.startsWith("prj_") || project.name !== projectName) {
+  console.error("Standalone project payload was not usable. DNS was not changed.");
+  process.exit(1);
+}
 if (dossierProjectId && projectId === dossierProjectId) {
   console.error("Refusing to deploy onto the dossier project. DNS was not changed.");
   process.exit(1);
 }
+if (!(await cliCanResolve(accountId))) {
+  console.error(
+    `Standalone project owner is not resolvable by the Vercel CLI (owner shape: ${shape(accountId)}). DNS was not changed.`,
+  );
+  process.exit(1);
+}
 
-const domains = await vercel(`/v9/projects/${projectId}/domains`);
+const teamId = accountId.startsWith("team_") ? accountId : undefined;
+const confirmed = await vercel(`/v9/projects/${projectId}`, { teamId });
+if (!confirmed.ok || confirmed.body?.id !== projectId) {
+  console.error(`Could not re-read the standalone project (${confirmed.status}). DNS was not changed.`);
+  process.exit(1);
+}
+
+const domains = await vercel(`/v9/projects/${projectId}/domains`, { teamId });
 if (!domains.ok) {
   console.error(`Could not confirm project domains (${domains.status}). DNS was not changed.`);
   process.exit(1);
@@ -81,30 +167,26 @@ if (live) {
   process.exit(1);
 }
 
+console.error(
+  `deploy owner shape: ${shape(accountId)}; owner matches secret org: ${accountId === secretOrgId ? "yes" : "no"}; dossier project: no`,
+);
+
 mkdirSync(resolve(siteRoot, ".vercel"), { recursive: true });
-writeFileSync(
-  resolve(siteRoot, ".vercel/project.json"),
-  JSON.stringify({ orgId, projectId }),
-);
+writeFileSync(resolve(siteRoot, ".vercel/project.json"), JSON.stringify({ orgId: accountId, projectId }));
 
-const deploy = spawnSync(
-  "vercel",
-  ["deploy", "--prod", "--yes", "--token", token],
-  {
-    cwd: siteRoot,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      VERCEL_ORG_ID: orgId,
-      VERCEL_PROJECT_ID: projectId,
-    },
+const deploy = spawnSync("vercel", ["deploy", "--prod", "--yes", "--token", token], {
+  cwd: siteRoot,
+  encoding: "utf8",
+  env: {
+    ...process.env,
+    VERCEL_ORG_ID: accountId,
+    VERCEL_PROJECT_ID: projectId,
   },
-);
+});
 
-const output = `${deploy.stdout ?? ""}\n${deploy.stderr ?? ""}`;
+const output = redact(`${deploy.stdout ?? ""}\n${deploy.stderr ?? ""}`);
 if (deploy.status !== 0) {
-  const safe = output.replaceAll(token, "[redacted]");
-  console.error(safe);
+  console.error(output);
   console.error("Deploy failed. DNS was not changed.");
   process.exit(deploy.status ?? 1);
 }
@@ -112,6 +194,7 @@ if (deploy.status !== 0) {
 const urls = [...output.matchAll(/https:\/\/[^\s]+/g)].map((match) => match[0]);
 const stable = urls.find((url) => url.includes(`${projectName}.vercel.app`)) ?? urls.at(-1) ?? "";
 if (!stable) {
+  console.error(output);
   console.error("Deploy finished without a URL. DNS was not changed.");
   process.exit(1);
 }

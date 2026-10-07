@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - cursor/elvis-standalone-site-8989
+      - cursor/elvis-deploy-scope-8989
       - claude/pfpa-platform-design-e1uz9o
     paths:
       - "sites/elvis-and-sons/**"
