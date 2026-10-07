@@ -21,9 +21,13 @@ concurrency:
 
 jobs:
   deploy:
+    name: Standalone Elvis site only — does not change DNS
     if: github.repository == 'Y2ksmo/Stage'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Vercel credentials live on this environment. Approving this job deploys elvis-and-sons-site only.
+    # It does not run the dossier deploy, attach elvisandsonsservices.com, or edit Namecheap DNS.
+    environment: production
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
