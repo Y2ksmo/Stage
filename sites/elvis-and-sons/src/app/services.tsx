@@ -1,5 +1,6 @@
+import Image from "next/image";
 import { BrandLink } from "./brand-link";
-import { container, portfolio, services } from "./content";
+import { container, jobs, services } from "./content";
 import { IconArrow, IconBrush, IconBuilding, IconCar, IconHome, IconTruck } from "./icons";
 
 const icons = [IconTruck, IconHome, IconBuilding, IconBrush, IconCar];
@@ -51,15 +52,27 @@ export function Portfolio() {
   return (
     <section id="portfolio" className="scroll-mt-28 border-y border-slate-200 bg-[#F8FAFC] py-16 sm:py-20" aria-labelledby="portfolio-heading">
       <div className={container}>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">Project portfolio</p>
-        <h2 id="portfolio-heading" className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#0F172A] sm:text-4xl">
-          Debris, households, and commercial work
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B45309]">Recent work</p>
+        <h2 id="portfolio-heading" className="mt-3 max-w-2xl text-3xl font-semibold tracking-[-0.03em] text-[#0F172A] sm:text-4xl">
+          Hauls and cleanouts from the truck
         </h2>
-        <ul className="mt-8 grid gap-5 md:grid-cols-3">
-          {portfolio.map((item) => (
-            <li key={item.title} className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h3 className="text-lg font-semibold text-[#0F172A]">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#334155]">{item.body}</p>
+        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[#334155]">
+          Debris, household loads, fixtures, and the trucks that carry them.
+        </p>
+        <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {jobs.map((job) => (
+            <li key={job.src} className={`group relative overflow-hidden rounded-2xl bg-[#0F172A] shadow-[0_18px_40px_-28px_rgba(15,23,42,0.65)] ${job.span}`}>
+              <Image
+                src={job.src}
+                alt={job.alt}
+                fill
+                sizes={job.span.includes("row-span-2") ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, 50vw"}
+                className="object-cover transition duration-500 group-hover:scale-[1.03]"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0F172A]/92 via-[#0F172A]/40 to-transparent px-4 pb-4 pt-16">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#FBBF24]">{job.kicker}</p>
+                <h3 className="mt-1 text-base font-semibold text-white">{job.title}</h3>
+              </div>
             </li>
           ))}
         </ul>
