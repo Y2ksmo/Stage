@@ -10,12 +10,12 @@ body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,
 .notice-ok { background:var(--ok-bg); color:var(--ok-fg); border-color:var(--ok-line); }
 fieldset { border:1px solid var(--line); border-radius:.5rem; padding:.75rem 1rem; margin:1rem 0; }
 legend { padding:0 .25rem; font-weight:600; }
-label { display:block; margin:.75rem 0 .25rem; font-weight:600; }
+body:not(:has(.elvis-root)) label { display:block; margin:.75rem 0 .25rem; font-weight:600; }
 .choice { display:flex; gap:.5rem; align-items:flex-start; font-weight:400; margin:.4rem 0; }
-textarea { width:100%; min-height:10rem; padding:.6rem; border:1px solid var(--line); border-radius:.4rem; background:transparent; color:inherit; font:inherit; }
+body:not(:has(.elvis-root)) textarea { width:100%; min-height:10rem; padding:.6rem; border:1px solid var(--line); border-radius:.4rem; background:transparent; color:inherit; font:inherit; }
 textarea.short { min-height:5rem; }
-button { margin-top:1rem; padding:.6rem 1.2rem; border:0; border-radius:.4rem; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
-button:disabled { opacity:.6; cursor:not-allowed; }
+body:not(:has(.elvis-root)) button { margin-top:1rem; padding:.6rem 1.2rem; border:0; border-radius:.4rem; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+body:not(:has(.elvis-root)) button:disabled { opacity:.6; cursor:not-allowed; }
 .page-wide { max-width: 60rem; }
 .profile-head { display:flex; flex-wrap:wrap; gap:1rem; justify-content:space-between; align-items:flex-start; }
 .score-box { border:1px solid var(--line); border-radius:.5rem; padding:.75rem 1rem; text-align:center; min-width:11rem; }
@@ -29,15 +29,15 @@ button:disabled { opacity:.6; cursor:not-allowed; }
 .badges { display:flex; flex-wrap:wrap; gap:.4rem; }
 .badge { border:1px solid var(--line); border-radius:.3rem; padding:.05rem .45rem; font-size:.75rem; font-weight:600; }
 .badge-claim { border-color:#93c5fd; } .badge-incident { border-color:#c4b5fd; } .badge-disputed { border-color:#fbbf24; }
-blockquote { margin:.75rem 0; padding:.1rem 0 .1rem .9rem; border-left:3px solid var(--line); white-space:pre-wrap; }
+body:not(:has(.elvis-root)) blockquote { margin:.75rem 0; padding:.1rem 0 .1rem .9rem; border-left:3px solid var(--line); white-space:pre-wrap; }
 .notice-note { color:var(--muted); font-style:italic; }
 .evidence summary { cursor:pointer; font-size:.9rem; }
 .reply { margin-top:.75rem; font-size:.9rem; }
 .reply-label { font-weight:600; margin:0; }
 .pager { display:flex; justify-content:space-between; margin:1rem 0; }
 .disclaimer { margin-top:2rem; border-top:1px solid var(--line); padding-top:1rem; }
-a { color: var(--accent); }
-input[type=password], input[type=text] { width:100%; padding:.5rem; border:1px solid var(--line); border-radius:.4rem; background:transparent; color:inherit; font:inherit; }
+body:not(:has(.elvis-root)) a { color: var(--accent); }
+body:not(:has(.elvis-root)) input[type=password], body:not(:has(.elvis-root)) input[type=text] { width:100%; padding:.5rem; border:1px solid var(--line); border-radius:.4rem; background:transparent; color:inherit; font:inherit; }
 .review-actions { margin-top:1rem; border-top:1px solid var(--line); padding-top:1rem; }
 .button-row { display:flex; gap:.6rem; flex-wrap:wrap; }
 .button-row button { margin-top:.5rem; }
