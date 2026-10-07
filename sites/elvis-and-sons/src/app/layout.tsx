@@ -1,0 +1,30 @@
+import type { Metadata } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
+import { Footer } from "./footer";
+import { Header } from "./header";
+import "./brand.css";
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-elvis",
+});
+
+export const metadata: Metadata = {
+  title: { absolute: "Elvis & Sons Multilink Ventures" },
+  description:
+    "Professional residential and commercial moves, estate cleanouts, deep cleaning, and interior painting across Maryland, Virginia, and Washington, D.C.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body className={`${jakarta.variable} elvis-root min-h-screen`}>
+        <a className="elvis-skip" href="#content">Skip to content</a>
+        <Header />
+        <div id="content" tabIndex={-1}>{children}</div>
+        <Footer />
+      </body>
+    </html>
+  );
+}

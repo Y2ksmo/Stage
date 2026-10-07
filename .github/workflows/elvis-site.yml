@@ -1,0 +1,65 @@
+name: Deploy standalone Elvis site
+
+# Deploys sites/elvis-and-sons to its own Vercel project (elvis-and-sons-site).
+# It does not deploy the dossier app and does not attach elvisandsonsservices.com.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/elvis-standalone-site-8989
+      - claude/pfpa-platform-design-e1uz9o
+    paths:
+      - "sites/elvis-and-sons/**"
+      - ".github/workflows/elvis-site.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvis-site-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.repository == 'Y2ksmo/Stage'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      DOSSIER_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ELVIS_PROJECT_ID: ${{ secrets.VERCEL_ELVIS_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sites/elvis-and-sons/package-lock.json
+
+      - name: Install site dependencies
+        working-directory: sites/elvis-and-sons
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Deploy standalone site
+        id: deploy
+        working-directory: sites/elvis-and-sons
+        run: |
+          url=$(node scripts/deploy.mjs)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "$url"
+
+      - name: Confirm the preview answers
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "${{ steps.deploy.outputs.url }}")
+          echo "home status: $code"
+          test "$code" = "200"
+          robots=$(curl -sI --retry 5 --retry-delay 5 --retry-all-errors "${{ steps.deploy.outputs.url }}" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^x-robots-tag:/ { print tolower($0) }')
+          echo "$robots"
+          echo "$robots" | grep -q "noindex"
