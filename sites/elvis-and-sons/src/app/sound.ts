@@ -168,65 +168,48 @@ export function playHaul(phase: "load" | "launch") {
   return true;
 }
 
-export function playSpace() {
+function metal(c: AudioContext, destination: AudioNode, when: number, duration: number, gain: number, frequency: number, q: number) {
+  const length = Math.max(1, Math.floor(c.sampleRate * duration));
+  const buffer = c.createBuffer(1, length, c.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i += 1) data[i] = Math.random() * 2 - 1;
+  const source = c.createBufferSource();
+  source.buffer = buffer;
+  const filter = c.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(frequency, when);
+  filter.Q.value = q;
+  const amp = c.createGain();
+  amp.gain.setValueAtTime(gain, when);
+  amp.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+  source.connect(filter);
+  filter.connect(amp);
+  amp.connect(destination);
+  source.start(when);
+  source.stop(when + duration + 0.02);
+}
+
+function cockRifle() {
   if (muted) return;
   const c = unlockSound();
   if (c.state !== "running") return;
   const bus = output();
-  const now = c.currentTime + 0.012;
-  const dry = c.createGain();
-  dry.gain.value = 0.85;
-  dry.connect(bus);
+  const now = c.currentTime + 0.008;
 
-  const delay = c.createDelay(1.2);
-  delay.delayTime.value = 0.186;
-  const feedback = c.createGain();
-  feedback.gain.value = 0.46;
-  const wash = c.createBiquadFilter();
-  wash.type = "lowpass";
-  wash.frequency.value = 2800;
-  const wet = c.createGain();
-  wet.gain.value = 0.55;
-  delay.connect(wash);
-  wash.connect(feedback);
-  feedback.connect(delay);
-  delay.connect(wet);
-  wet.connect(bus);
+  metal(c, bus, now, 0.055, 0.42, 2100, 3.4);
+  tone(c, bus, 1680, now, 0.03, 0.06, "square");
 
-  const send = c.createGain();
-  send.gain.value = 1;
-  send.connect(dry);
-  send.connect(delay);
+  const lock = now + 0.078;
+  metal(c, bus, lock, 0.04, 0.62, 980, 1.6);
+  metal(c, bus, lock, 0.022, 0.38, 3400, 8);
+  tone(c, bus, 126, lock, 0.06, 0.2, "triangle");
+  tone(c, bus, 540, lock + 0.004, 0.035, 0.14, "square");
+}
 
-  const air = noise(c, 0.8);
-  const airFilter = c.createBiquadFilter();
-  airFilter.type = "bandpass";
-  airFilter.Q.value = 4;
-  airFilter.frequency.setValueAtTime(240, now);
-  airFilter.frequency.exponentialRampToValueAtTime(3200, now + 0.22);
-  airFilter.frequency.exponentialRampToValueAtTime(640, now + 0.7);
-  const airAmp = c.createGain();
-  airAmp.gain.setValueAtTime(0.0001, now);
-  airAmp.gain.exponentialRampToValueAtTime(0.2, now + 0.05);
-  airAmp.gain.exponentialRampToValueAtTime(0.0001, now + 0.85);
-  air.connect(airFilter);
-  airFilter.connect(airAmp);
-  airAmp.connect(send);
-  air.start(now);
-  air.stop(now + 0.9);
-
-  [523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
-    tone(c, send, frequency, now + index * 0.035, 1.25, 0.07);
-  });
-  tone(c, send, 98, now, 0.42, 0.16);
-  tone(c, send, 1568, now + 0.08, 0.7, 0.035);
+export function playSpace() {
+  cockRifle();
 }
 
 export function playShut() {
-  if (muted) return;
-  const c = unlockSound();
-  if (c.state !== "running") return;
-  const now = c.currentTime + 0.01;
-  tone(c, output(), 660, now, 0.28, 0.05);
-  tone(c, output(), 196, now, 0.34, 0.08);
+  cockRifle();
 }
