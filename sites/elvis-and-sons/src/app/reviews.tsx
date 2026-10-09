@@ -13,7 +13,14 @@ export function Reviews() {
         <ul className="mt-10 grid gap-5 lg:grid-cols-3">
           {reviews.map((review) => (
             <li key={review.place}>
-              <figure className="flex h-full flex-col rounded-2xl border border-slate-200 bg-[#F8FAFC] p-6">
+              <figure
+                tabIndex={0}
+                data-space-card
+                data-space-kicker={review.place}
+                data-space-title={review.title}
+                data-space-body={review.quote}
+                className="flex h-full flex-col rounded-2xl border border-slate-200 bg-[#F8FAFC] p-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+              >
                 <p className="text-sm font-semibold tracking-[0.14em] text-[#B45309]" aria-label="5 out of 5 stars">★★★★★</p>
                 <blockquote className="mt-4 flex-1 text-[#1E293B]">
                   <p className="font-semibold text-[#0F172A]">“{review.title}”</p>

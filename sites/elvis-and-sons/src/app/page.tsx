@@ -1,5 +1,6 @@
 import { quoteLabel } from "./content";
 import { Hero, Metrics } from "./hero";
+import { Intro } from "./intro";
 import { QuoteSection } from "./quote-form";
 import { Reviews } from "./reviews";
 import { Portfolio, Services } from "./services";
@@ -19,6 +20,7 @@ export default async function ElvisHomePage({
 
   return (
     <main>
+      <Intro />
       <Hero />
       <Metrics />
       <Services />
