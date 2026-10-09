@@ -24,7 +24,16 @@ export function Services() {
             const Icon = icons[index] ?? IconTruck;
             return (
               <li key={item.id} className={index === 4 ? "sm:col-span-2 xl:col-span-1" : undefined}>
-                <article id={item.id} className="group flex h-full scroll-mt-28 flex-col rounded-2xl border border-slate-200 bg-[#F8FAFC] p-6 transition duration-200 hover:-translate-y-1 hover:border-[#2563EB]/35 hover:bg-white hover:shadow-[0_20px_40px_-28px_rgba(15,23,42,0.55)]">
+                <article
+                  id={item.id}
+                  tabIndex={0}
+                  data-space-card
+                  data-space-kicker="Service"
+                  data-space-title={item.title}
+                  data-space-body={item.body}
+                  data-space-href={`/?category=${item.quote}#quote`}
+                  className="group flex h-full scroll-mt-28 flex-col rounded-2xl border border-slate-200 bg-[#F8FAFC] p-6 transition duration-200 hover:-translate-y-1 hover:border-[#2563EB]/35 hover:bg-white hover:shadow-[0_20px_40px_-28px_rgba(15,23,42,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+                >
                   <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFFBEB] text-[#B45309]">
                     <Icon className="h-5 w-5" />
                   </span>
@@ -62,17 +71,29 @@ export function Portfolio() {
         <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {jobs.map((job) => (
             <li key={job.src} className={`group relative overflow-hidden rounded-2xl bg-[#0F172A] shadow-[0_18px_40px_-28px_rgba(15,23,42,0.65)] ${job.span}`}>
-              <Image
-                src={job.src}
-                alt={job.alt}
-                fill
-                sizes={job.span.includes("row-span-2") ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, 50vw"}
-                className="object-cover transition duration-500 group-hover:scale-[1.03]"
-              />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0F172A]/92 via-[#0F172A]/40 to-transparent px-4 pb-4 pt-16">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#FBBF24]">{job.kicker}</p>
-                <h3 className="mt-1 text-base font-semibold text-white">{job.title}</h3>
-              </div>
+              <button
+                type="button"
+                data-space-card
+                data-space-kicker={job.kicker}
+                data-space-title={job.title}
+                data-space-body={job.alt}
+                data-space-image={job.src}
+                data-space-alt={job.alt}
+                aria-label={`${job.title}. Open photo.`}
+                className="absolute inset-0 block h-full w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FBBF24]"
+              >
+                <Image
+                  src={job.src}
+                  alt=""
+                  fill
+                  sizes={job.span.includes("row-span-2") ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 25vw, 50vw"}
+                  className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                />
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0F172A]/92 via-[#0F172A]/40 to-transparent px-4 pb-4 pt-16">
+                  <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#FBBF24]">{job.kicker}</span>
+                  <span className="mt-1 block text-base font-semibold text-white">{job.title}</span>
+                </span>
+              </button>
             </li>
           ))}
         </ul>

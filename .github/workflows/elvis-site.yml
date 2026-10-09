@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - cursor/elvis-deploy-scope-8989
+      - cursor/elvis-cinematic-motion-8989
       - claude/pfpa-platform-design-e1uz9o
     paths:
       - "sites/elvis-and-sons/**"
@@ -63,9 +64,14 @@ jobs:
 
       - name: Confirm the preview answers
         run: |
-          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "${{ steps.deploy.outputs.url }}")
+          url="${{ steps.deploy.outputs.url }}"
+          code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "$url")
           echo "home status: $code"
           test "$code" = "200"
-          robots=$(curl -sI --retry 5 --retry-delay 5 --retry-all-errors "${{ steps.deploy.outputs.url }}" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^x-robots-tag:/ { print tolower($0) }')
-          echo "$robots"
-          echo "$robots" | grep -q "noindex"
+          host=$(node -e "console.log(new URL(process.argv[1]).hostname)" "$url")
+          echo "host: $host"
+          if [ "$host" != "elvisandsonsservices.com" ] && [ "$host" != "www.elvisandsonsservices.com" ]; then
+            robots=$(curl -sI --retry 5 --retry-delay 5 --retry-all-errors "$url" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^x-robots-tag:/ { print tolower($0) }')
+            echo "$robots"
+            echo "$robots" | grep -q "noindex"
+          fi
