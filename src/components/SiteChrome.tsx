@@ -7,8 +7,9 @@ import { Header } from "./Header";
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const brandSite = pathname === "/elvis-and-sons" || pathname.startsWith("/elvis-and-sons/");
+  const orbital = pathname === "/globe" || pathname.startsWith("/globe/");
 
-  if (brandSite) return children;
+  if (brandSite || orbital) return children;
 
   return (
     <>
