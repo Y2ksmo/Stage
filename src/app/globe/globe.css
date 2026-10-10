@@ -1,0 +1,231 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+.globe-root {
+  min-height: 100vh;
+  background: #02030a;
+  color: #f5f7fb;
+  color-scheme: dark;
+  overflow-x: hidden;
+}
+
+.globe-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.globe-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.globe-label-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.globe-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.globe-scroll {
+  height: 420vh;
+}
+
+.globe-boot {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #02030a;
+  color: rgba(255, 255, 255, 0.72);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.geo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.32rem 0.65rem 0.32rem 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(6, 12, 24, 0.62);
+  color: white;
+  font: 600 11px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+  transform: translateY(-16px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.geo-chip[data-fan="true"] {
+  letter-spacing: 0.08em;
+  font-size: 10px;
+}
+
+.geo-chip i {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: #9fd4ff;
+  box-shadow: 0 0 10px #9fd4ff;
+}
+
+.geo-chip:hover,
+.geo-chip[data-hot="true"] {
+  border-color: rgba(170, 214, 255, 0.95);
+  box-shadow: 0 0 22px rgba(120, 186, 255, 0.45);
+}
+
+.geo-chip[data-featured="true"] {
+  border-color: rgba(255, 214, 160, 0.9);
+}
+
+.geo-chip[data-featured="true"] i {
+  background: #ffd7a4;
+  box-shadow: 0 0 10px #ffd7a4;
+}
+
+.sat-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  background: #07110e;
+  pointer-events: none;
+  transform-origin: center center;
+}
+
+.sat-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.4rem;
+  background:
+    radial-gradient(circle at center, rgba(48, 92, 64, 0.45), transparent 42%),
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    #07110e;
+  background-size: auto, 48px 48px, 48px 48px, auto;
+  text-align: center;
+}
+
+.sat-fallback strong {
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  letter-spacing: -0.04em;
+}
+
+.sat-fallback span {
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.sat-grid {
+  position: absolute;
+  z-index: 1;
+}
+
+.sat-row {
+  display: flex;
+}
+
+.sat-cell {
+  position: relative;
+  width: 256px;
+  height: 256px;
+  flex: none;
+}
+
+.sat-tile {
+  position: absolute;
+  inset: 0;
+  width: 256px;
+  height: 256px;
+  object-fit: cover;
+}
+
+.sat-cell .sat-tile + .sat-tile {
+  mix-blend-mode: normal;
+}
+
+.sat-tile-empty {
+  background: #102018;
+}
+
+.sat-vectors {
+  position: absolute;
+  inset: 8%;
+  z-index: 2;
+  width: 84%;
+  height: 84%;
+  fill: none;
+  stroke: rgba(226, 255, 240, 0.42);
+  stroke-width: 0.35;
+}
+
+.sat-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(255, 244, 214, 0.95);
+  border-radius: 999px;
+  box-shadow: 0 0 0 8px rgba(255, 244, 214, 0.12), 0 0 24px rgba(255, 244, 214, 0.45);
+}
+
+.sat-reticle::before,
+.sat-reticle::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 244, 214, 0.95);
+}
+
+.sat-reticle::before {
+  left: 50%;
+  top: -10px;
+  width: 1px;
+  height: 8px;
+  transform: translateX(-50%);
+}
+
+.sat-reticle::after {
+  left: 50%;
+  bottom: -10px;
+  width: 1px;
+  height: 8px;
+  transform: translateX(-50%);
+}
+
+@media (max-width: 720px) {
+  .geo-chip {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .geo-chip,
+  .sat-layer {
+    transition: none;
+  }
+}

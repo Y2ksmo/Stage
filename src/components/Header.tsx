@@ -10,6 +10,7 @@ export function Header() {
           <Link href="/">Home</Link>
           <Link href="/search">Zoeken</Link>
           <Link href="/methodology">Methodologie</Link>
+          <Link href="/globe">Globe</Link>
         </nav>
         <HeaderSearch />
       </div>
