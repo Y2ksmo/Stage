@@ -76,10 +76,63 @@ export const services = [
   },
 ];
 
-export const portfolio = [
-  { title: "Debris & Clearing", body: "Post-construction waste, garage cleanouts, and haul-away." },
-  { title: "Household & Fixtures", body: "Furniture moves, household cleanouts, and property turnover." },
-  { title: "Commercial Fleet", body: "Office moves, commercial cleanouts, and scheduled property work." },
+export const jobs = [
+  {
+    src: "/jobs/curb-haul.jpg",
+    alt: "Black pickup at the curb with the door open, the bed piled with lumber, cardboard, hose, and yard debris.",
+    kicker: "Junk removal",
+    title: "Full load at the curb",
+    span: "min-h-[22rem] sm:col-span-2 lg:row-span-2 lg:min-h-[36rem]",
+  },
+  {
+    src: "/jobs/construction-haul.jpg",
+    alt: "Pickup bed in the rain, loaded with plywood, framing lumber, and a log.",
+    kicker: "Debris haul",
+    title: "Construction debris",
+    span: "min-h-64 sm:col-span-2",
+  },
+  {
+    src: "/jobs/household-cleanout.jpg",
+    alt: "Room staged for a cleanout, with a mattress, lamp, bicycle, and household items.",
+    kicker: "Cleanout",
+    title: "Household load",
+    span: "min-h-64",
+  },
+  {
+    src: "/jobs/lumber-detail.jpg",
+    alt: "Close view of lumber, plywood, and a log stacked in a pickup bed.",
+    kicker: "Scrap",
+    title: "Lumber and scrap",
+    span: "min-h-64",
+  },
+  {
+    src: "/jobs/fixture-removal.jpg",
+    alt: "Bathroom sink, cabinet doors, and a vanity frame tied down in a pickup bed.",
+    kicker: "Fixtures",
+    title: "Sink and cabinets",
+    span: "min-h-64",
+  },
+  {
+    src: "/jobs/tire-haul.jpg",
+    alt: "Maroon pickup loaded with tires, a traffic cone, a stump, and bagged junk.",
+    kicker: "Junk removal",
+    title: "Tires and bulky junk",
+    span: "min-h-64",
+  },
+  {
+    src: "/jobs/driveway-haul.jpg",
+    alt: "Pickup in a driveway, the bed stacked with boards, hose, and cardboard.",
+    kicker: "Pickup",
+    title: "Driveway pickup",
+    span: "min-h-64",
+  },
+  {
+    src: "/jobs/box-truck.jpg",
+    alt: "Open rear of a box truck with a few bags inside, parked on a residential street.",
+    kicker: "Fleet",
+    title: "Box truck on the job",
+    span: "min-h-64",
+  },
 ];
 
 export const reasons = [
